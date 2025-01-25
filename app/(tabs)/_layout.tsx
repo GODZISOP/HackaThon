@@ -1,43 +1,73 @@
-import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
-
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { Tabs } from 'expo-router';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
-      }}>
+    <Tabs screenOptions={{ 
+        tabBarActiveTintColor: 'blue', 
+        tabBarInactiveTintColor: 'gray' 
+      }}
+    >
+      {/* Home Tab */}
       <Tabs.Screen
-        name="index"
+        name="Home"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome size={28} name="home" color={color} />,
         }}
       />
+      
+      {/* Search Tab */}
       <Tabs.Screen
-        name="explore"
+        name="Search"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Search',
+          tabBarIcon: ({ color }) => <FontAwesome size={28} name="search" color={color} />, // Search icon
+        }}
+      />
+      
+      {/* Categories Tab */}
+      <Tabs.Screen
+        name="cate"
+        options={{
+          title: 'Categories',
+          tabBarIcon: ({ color }) => <FontAwesome size={28} name="list" color={color} />,
+        }}
+      />
+      
+      {/* Cart Tab */}
+      <Tabs.Screen
+        name="Order"
+        options={{
+          title: 'Cart',
+          tabBarIcon: ({ color }) => <FontAwesome size={28} name="shopping-cart" color={color} />,
+        }}
+      />
+      {/* Cart Tab */}
+      <Tabs.Screen
+        name="Cate"
+        options={{
+          title: 'Categories',
+          tabBarIcon: ({ color }) => <FontAwesome size={28} name="shopping-cart" color={color} />,
+        }}
+      />
+      
+      {/* Profile Tab */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <FontAwesome size={28} name="user" color={color} />,
+        }}
+      />
+      
+      {/* More Tab */}
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: 'More',
+          tabBarIcon: ({ color }) => <FontAwesome size={28} name="ellipsis-h" color={color} />,
         }}
       />
     </Tabs>
