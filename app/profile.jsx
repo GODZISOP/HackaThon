@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { getAuth } from 'firebase/auth';
+import { getAuth, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../utilis/firebaseConfig'; // Import Firebase Firestore
 
@@ -9,6 +9,7 @@ const ProfileUpdatePage = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [address, setAddress] = useState('');
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
 
   const auth = getAuth();
@@ -17,6 +18,7 @@ const ProfileUpdatePage = () => {
   useEffect(() => {
     if (user) {
       setEmail(user.email); // Use the email from Firebase Auth
+      setName(user.displayName || ''); // Get the user's display name from Firebase Auth
       fetchUserProfile(user.uid); // Fetch user profile from Firestore
     }
   }, [user]);
@@ -26,9 +28,13 @@ const ProfileUpdatePage = () => {
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        setCnic(userData.CNIC || '');
-        setPhoneNumber(userData.PhoneNumber || '');
-        setAddress(userData.Address || '');
+        
+        // Debugging: Check the data fetched from Firestore
+        console.log('Fetched user data:', userData);
+
+        setCnic(userData.CNIC || ''); // Set CNIC from Firestore
+        setPhoneNumber(userData.PhoneNumber || ''); // Set phone number from Firestore
+        setAddress(userData.Address || ''); // Set address from Firestore
       } else {
         console.log('No such document!');
       }
@@ -40,7 +46,7 @@ const ProfileUpdatePage = () => {
   const handleProfileUpdate = async () => {
     const { uid } = user;
 
-    if (!cnic || !phoneNumber || !address) {
+    if (!name || !cnic || !phoneNumber || !address) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
@@ -48,7 +54,10 @@ const ProfileUpdatePage = () => {
     try {
       setLoading(true);
 
-      // Update Firestore with the user's email, CNIC, phone number, and address
+      // Update name in Firebase Authentication
+      await updateProfile(user, { displayName: name });
+
+      // Update Firestore with the user's CNIC, phone number, address, and email
       await setDoc(doc(db, 'users', uid), {
         CNIC: cnic,
         PhoneNumber: phoneNumber,
@@ -68,6 +77,13 @@ const ProfileUpdatePage = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Update Your Profile</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Name"
+        value={name}
+        onChangeText={setName}
+      />
 
       <TextInput
         style={styles.input}
