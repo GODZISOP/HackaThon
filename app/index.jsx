@@ -4,15 +4,13 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 const Index = () => {
   return (
     <View style={styles.container}>
-     
-      
       <Text style={styles.welcomeText}>Welcome to LoanEasy!</Text>
       <Text style={styles.description}>
         Your trusted partner for fast and secure loans. Get started today!
       </Text>
 
       <TouchableOpacity style={styles.button}>
-        <Link href="/Home" style={styles.linkText}>goto front</Link>
+        <Link href="/Home" style={styles.linkText}>Go to Front</Link>
       </TouchableOpacity>
     </View>
   );
@@ -23,7 +21,7 @@ export default Index;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F6FF', // Light purple background
+    backgroundColor: '#E8F5E9', // Light green background
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -36,19 +34,19 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#6a1b9a',
+    color: '#388E3C', // Dark green text
     marginBottom: 10,
     textAlign: 'center',
   },
   description: {
     fontSize: 18,
-    color: '#333',
+    color: '#388E3C', // Dark green description text
     textAlign: 'center',
     marginBottom: 30,
     paddingHorizontal: 20,
   },
   button: {
-    backgroundColor: '#6a1b9a', // Purple button background
+    backgroundColor: '#388E3C', // Dark green button background
     paddingVertical: 12,
     paddingHorizontal: 64,
     borderRadius: 8,

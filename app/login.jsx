@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { TextInput, TouchableOpacity, StyleSheet, Text, View, ActivityIndicator, Image } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../utilis/firebaseConfig';
+import { auth } from '../utilis/firebaseConfig';
 import { useState } from 'react';
 
 const SignIn = () => {
@@ -38,7 +38,7 @@ const SignIn = () => {
   return (
     <View style={styles.container}>
       {/* Image at the top */}
-      
+      {/* <Image source={require('path-to-your-image.png')} style={styles.image} /> */}
 
       <Text style={styles.title}>Log In</Text>
 
@@ -87,7 +87,7 @@ const SignIn = () => {
 
       {/* Show loading spinner while authenticating */}
       {isLoading ? (
-        <ActivityIndicator size="large" color="#6200ee" style={styles.spinner} />
+        <ActivityIndicator size="large" color="#4CAF50" style={styles.spinner} />
       ) : (
         <TouchableOpacity style={styles.submitButton} onPress={handleLogin}>
           <Text style={styles.submitButtonText}>Sign In</Text>
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     borderRadius: 20,
     borderWidth: 3,
-    borderColor: '#6200ee',
+    borderColor: '#4CAF50',
     shadowColor: '#000',  // Shadow for image
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -124,14 +124,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#6200ee',
+    color: '#4CAF50',  // Green color for the title
     marginBottom: 30,
     textAlign: 'center',
   },
   input: {
     width: '90%',
     height: 50,
-    borderColor: '#6200ee',
+    borderColor: '#4CAF50',  // Green border color for inputs
     borderWidth: 2,
     borderRadius: 25,
     paddingLeft: 15,
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     width: '90%',
-    backgroundColor: '#6200ee',
+    backgroundColor: '#4CAF50',  // Green background color for the button
     paddingVertical: 14,
     borderRadius: 25,
     alignItems: 'center',
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   link: {
     marginTop: 15,
     fontSize: 16,
-    color: '#6200ee',
+    color: '#4CAF50',  // Green color for the link
     textDecorationLine: 'underline',
   },
   errorText: {

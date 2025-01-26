@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../utilis/firebaseConfig'; // Import Firebase Firestore
+import { db } from '../utilis/firebaseConfig'; // Import Firebase Firestore
 
 const ProfileUpdatePage = () => {
   const [cnic, setCnic] = useState('');
