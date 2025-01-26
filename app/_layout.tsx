@@ -7,6 +7,8 @@ export default function Layout() {
       {/* Define your main stack screen structure */}
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={{ title: 'Profile' }} />
+      <Stack.Screen name="Home"  />
+      <Stack.Screen name="LoanForm"  />
       <Stack.Screen name="Login" />  {/* Ensure the name matches */}
     </Stack>
   );

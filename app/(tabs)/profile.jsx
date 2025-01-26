@@ -1,93 +1,113 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
-import { auth, db } from '../../utilis/firebaseConfig'; // Firebase config import
-import { doc, getDoc } from 'firebase/firestore'; // Firebase Firestore
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { getAuth } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../../utilis/firebaseConfig'; // Import Firebase Firestore
 
-const Profile = () => {
-  const [userInfo, setUserInfo] = useState(null);
-  const [userDetails, setUserDetails] = useState(null);  // To store user details from Firestore
-  const [bio, setBio] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+const ProfileUpdatePage = () => {
+  const [cnic, setCnic] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [address, setAddress] = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const auth = getAuth();
+  const user = auth.currentUser;
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        setUserInfo({
-          displayName: user.displayName || 'Anonymous',
-          email: user.email,
-          photoURL:
-            user.photoURL ||
-            'https://i0.wp.com/picjumbo.com/wp-content/uploads/black-friday-images-download.jpg?w=600&quality=80',
-        });
+    if (user) {
+      setEmail(user.email); // Use the email from Firebase Auth
+      fetchUserProfile(user.uid); // Fetch user profile from Firestore
+    }
+  }, [user]);
 
-        // Fetch user details (name, address, phone) from Firestore
-        const userDocRef = doc(db, 'users', user.uid);
-        try {
-          const docSnap = await getDoc(userDocRef);
-          if (docSnap.exists()) {
-            setUserDetails(docSnap.data());  // Set fetched user details
-            setBio(docSnap.data().bio || 'No bio available');
-          } else {
-            console.log('No such document!');
-          }
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-        }
-        setIsLoading(false);
+  const fetchUserProfile = async (uid) => {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setCnic(userData.CNIC || '');
+        setPhoneNumber(userData.PhoneNumber || '');
+        setAddress(userData.Address || '');
       } else {
-        setIsLoading(false);
-        setUserInfo(null);
-        setBio('');
+        console.log('No such document!');
       }
-    });
+    } catch (error) {
+      console.error('Error getting document:', error);
+    }
+  };
 
-    return () => unsubscribe();
-  }, []);
+  const handleProfileUpdate = async () => {
+    const { uid } = user;
 
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#6A0DAD" />
-      </View>
-    );
-  }
+    if (!cnic || !phoneNumber || !address) {
+      Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
 
-  if (!userInfo) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>No user data found. Please log in.</Text>
-      </View>
-    );
-  }
+    try {
+      setLoading(true);
+
+      // Update Firestore with the user's email, CNIC, phone number, and address
+      await setDoc(doc(db, 'users', uid), {
+        CNIC: cnic,
+        PhoneNumber: phoneNumber,
+        Address: address,
+        Email: email, // You may want to store this as well if it's being changed
+      }, { merge: true });
+
+      setLoading(false);
+      Alert.alert('Profile Updated', 'Your profile information has been updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setLoading(false);
+      Alert.alert('Error', 'There was an issue updating your profile.');
+    }
+  };
 
   return (
     <View style={styles.container}>
-      {/* Profile Header */}
-      <View style={styles.header}>
-        <Image source={{ uri: userInfo.photoURL }} style={styles.profileImage} />
-        <Text style={styles.displayName}>{userInfo.displayName}</Text>
-        <Text style={styles.bio}>{bio}</Text>
-        <TouchableOpacity style={styles.followButton}>
-          <Text style={styles.followButtonText}>Follow</Text>
-        </TouchableOpacity>
-      </View>
+      <Text style={styles.header}>Update Your Profile</Text>
 
-      {/* User Details */}
-      <View style={styles.detailsContainer}>
-        {userDetails && (
-          <>
-            <Text style={styles.detailsText}>Name: {userDetails.name}</Text>
-            <Text style={styles.detailsText}>Address: {userDetails.address}</Text>
-            <Text style={styles.detailsText}>Phone: {userDetails.phone}</Text>
-          </>
-        )}
-      </View>
+      <TextInput
+        style={styles.input}
+        placeholder="CNIC"
+        value={cnic}
+        onChangeText={setCnic}
+        keyboardType="numeric"
+      />
 
-      {/* Recent Posts */}
-      <ScrollView style={styles.postsContainer}>
-        <Text style={styles.sectionTitle}>Recent Posts</Text>
-        {/* Post items can be dynamically added here */}
-      </ScrollView>
+      <TextInput
+        style={styles.input}
+        placeholder="Phone Number"
+        value={phoneNumber}
+        onChangeText={setPhoneNumber}
+        keyboardType="phone-pad"
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Address"
+        value={address}
+        onChangeText={setAddress}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        editable={false} // Make it read-only if the email is fixed
+      />
+
+      <TouchableOpacity
+        style={styles.submitButton}
+        onPress={handleProfileUpdate}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>{loading ? 'Updating...' : 'Update Profile'}</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -95,67 +115,40 @@ const Profile = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F6FF', // Light purple background
-    paddingHorizontal: 20,
-    paddingTop: 50,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   header: {
-    alignItems: 'center',
+    fontSize: 26,
+    fontWeight: '700',
     marginBottom: 30,
+    color: '#2D3E50',
   },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
-    borderColor: '#6A0DAD', // Purple border
+  input: {
+    height: 50,
+    width: '100%',
+    borderColor: '#ddd',
+    borderWidth: 1.5,
+    borderRadius: 8,
     marginBottom: 15,
-  },
-  displayName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  bio: {
+    paddingLeft: 15,
     fontSize: 16,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 15,
+    backgroundColor: '#fafafa',
   },
-  followButton: {
-    backgroundColor: '#6A0DAD', // Purple button
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+  submitButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderRadius: 25,
+    marginVertical: 10,
   },
-  followButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  detailsContainer: {
-    marginBottom: 20,
-  },
-  detailsText: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 10,
-  },
-  postsContainer: {
-    flex: 1,
-  },
-  sectionTitle: {
+  buttonText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#6A0DAD',
-    textAlign: 'center',
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
 
-export default Profile;
+export default ProfileUpdatePage;

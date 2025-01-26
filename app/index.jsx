@@ -1,34 +1,65 @@
 import { Link } from 'expo-router';
-import { View, Text, ScrollView, FlatList, StyleSheet, Image, TouchableOpacity, Animated, Easing } from 'react-native';
-const Index =()=>{
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 
-    return(
-       <View style={styles.container}>
-Welcome page
-<TouchableOpacity  style={styles.button}>
- <Link href="/Signup" >go to sign</Link>
-</TouchableOpacity>
-       </View> 
-    )
+const Index = () => {
+  return (
+    <View style={styles.container}>
+     
+      
+      <Text style={styles.welcomeText}>Welcome to LoanEasy!</Text>
+      <Text style={styles.description}>
+        Your trusted partner for fast and secure loans. Get started today!
+      </Text>
+
+      <TouchableOpacity style={styles.button}>
+        <Link href="/Home" style={styles.linkText}>goto front</Link>
+      </TouchableOpacity>
+    </View>
+  );
 }
 
 export default Index;
-const styles = StyleSheet.create({
 
-    container: {
-        flex: 1,
-        backgroundColor: '#F8F6FF', // Light purple background
-        paddingHorizontal: 20,
-        paddingTop: 50,
-      },
-      button: {
-        color:'white',
-        backgroundColor: '#6a1b9a', // Purple button background
-        paddingVertical: 12,
-        paddingHorizontal: 64,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        elevation: 5, // Adding shadow for the button
-    },
-})
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F6FF', // Light purple background
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  logo: {
+    width: 150,
+    height: 150,
+    marginBottom: 20,
+  },
+  welcomeText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#6a1b9a',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  description: {
+    fontSize: 18,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 30,
+    paddingHorizontal: 20,
+  },
+  button: {
+    backgroundColor: '#6a1b9a', // Purple button background
+    paddingVertical: 12,
+    paddingHorizontal: 64,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5, // Adding shadow for the button
+  },
+  linkText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textDecorationLine: 'none',
+  },
+});

@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, TextInput, StyleSheet, ScrollView } from 'react-native';
 import { db, addDoc, collection } from '../../utilis/firebaseConfig'; // Import Firebase functions
 import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth'; // Import Firebase Auth functions
-import { useRouter } from 'expo-router';
+import { useRouter } from 'expo-router'; // Import useRouter hook for navigation
+
 const LandingPage = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [cnic, setCnic] = useState('');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [password, setPassword] = useState(''); // New state for password
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
   const [initialDeposit, setInitialDeposit] = useState('');
   const [loanPeriod, setLoanPeriod] = useState('3');
   const [installments, setInstallments] = useState([]);
+  const [isUserCreated, setIsUserCreated] = useState(false);
 
   const router = useRouter();
   const loanData = {
-    // Loan data object remains unchanged
     'Wedding Loans': {
       subcategories: ['Valima', 'Furniture', 'Valima Food', 'Jahez'],
       maxLoan: 500000,
@@ -71,10 +71,11 @@ const LandingPage = () => {
 
   const handleProceed = async () => {
     const auth = getAuth();
+    const defaultPassword = 'Default@123'; // Default password for the user
 
     try {
       // Create the user using Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password); // Use the entered password
+      const userCredential = await createUserWithEmailAndPassword(auth, email, defaultPassword);
       const user = userCredential.user;
       console.log("User created: ", user);
 
@@ -97,15 +98,23 @@ const LandingPage = () => {
       const docRef = await addDoc(collection(db, 'loanApplications'), formData);
       console.log("Document written with ID: ", docRef.id);
 
-      // Navigate to the login screen after successful submission
-      router.push('/login'); // Navigate to Login page
-
+      // Mark user creation as successful
+      setIsUserCreated(true);
+      
       // Close the modal after submission
       setModalVisible(false);
+
     } catch (e) {
-      console.error("Error adding document: ", e);
+      console.error("Error adding document: ", e); // Detailed error logging
     }
   };
+
+  useEffect(() => {
+    if (isUserCreated) {
+      // Navigate to login page only when user creation is successful
+      router.push('/login');
+    }
+  }, [isUserCreated]);
 
   const handleCategorySelect = (category) => {
     setSelectedCategory(category);
@@ -202,15 +211,6 @@ const LandingPage = () => {
               onChangeText={setName}
             />
 
-            {/* Password Input */}
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={true}  // To mask the password
-            />
-
             {/* Initial Deposit Input */}
             <TextInput
               style={styles.input}
@@ -231,7 +231,7 @@ const LandingPage = () => {
 
             {/* Submit Button */}
             <TouchableOpacity style={styles.submitButton} onPress={handleProceed}>
-              <Text style={styles.buttonText}>Submit</Text>
+              <Text style={styles.buttonText}></Text>
             </TouchableOpacity>
 
             {/* Close Button */}
@@ -244,12 +244,6 @@ const LandingPage = () => {
     </View>
   );
 };
-
-
-
-
-
-
 
 const styles = StyleSheet.create({
   container: {
