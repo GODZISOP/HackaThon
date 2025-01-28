@@ -1,129 +1,104 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { getAuth, updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../utilis/firebaseConfig'; // Import Firebase Firestore
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 
-const ProfileUpdatePage = () => {
-  const [cnic, setCnic] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [address, setAddress] = useState('');
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [loading, setLoading] = useState(false);
+const ProfileScreen = () => {
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const auth = getAuth();
-  const user = auth.currentUser;
+  const db = getFirestore();
 
-  useEffect(() => {
-    if (user) {
-      setEmail(user.email); // Use the email from Firebase Auth
-      setName(user.displayName || ''); // Get the user's display name from Firebase Auth
-      fetchUserProfile(user.uid); // Fetch user profile from Firestore
+  // Function to create/update user profile in Firestore
+  const createUserProfile = async (user) => {
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+
+      const defaultProfile = {
+        CNIC: "",
+        PhoneNumber: "",
+        Address: "",
+        Email: user.email || "",
+      };
+
+      await setDoc(userDocRef, defaultProfile, { merge: true });
+      console.log("User profile created/updated in Firestore!");
+    } catch (error) {
+      console.error("Error creating user profile:", error);
     }
-  }, [user]);
+  };
 
+  // Function to fetch user profile from Firestore
   const fetchUserProfile = async (uid) => {
     try {
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        
-        // Debugging: Check the data fetched from Firestore
-        console.log('Fetched user data:', userData);
+      const userDocRef = doc(db, "users", uid);
+      const userDoc = await getDoc(userDocRef);
 
-        setCnic(userData.CNIC || ''); // Set CNIC from Firestore
-        setPhoneNumber(userData.PhoneNumber || ''); // Set phone number from Firestore
-        setAddress(userData.Address || ''); // Set address from Firestore
+      if (userDoc.exists()) {
+        setProfile(userDoc.data());
+        console.log("User profile fetched:", userDoc.data());
       } else {
-        console.log('No such document!');
+        console.log("No profile found for user:", uid);
       }
     } catch (error) {
-      console.error('Error getting document:', error);
+      console.error("Error fetching user profile:", error);
     }
   };
 
-  const handleProfileUpdate = async () => {
-    const { uid } = user;
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        console.log("User signed in:", currentUser.email);
 
-    if (!name || !cnic || !phoneNumber || !address) {
-      Alert.alert('Error', 'Please fill in all fields.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // Update name in Firebase Authentication
-      await updateProfile(user, { displayName: name });
-
-      // Update Firestore with the user's CNIC, phone number, address, and email
-      await setDoc(doc(db, 'users', uid), {
-        CNIC: cnic,
-        PhoneNumber: phoneNumber,
-        Address: address,
-        Email: email, // You may want to store this as well if it's being changed
-      }, { merge: true });
+        await createUserProfile(currentUser);
+        await fetchUserProfile(currentUser.uid);
+      } else {
+        setUser(null);
+        setProfile(null);
+        console.log("No user is signed in.");
+      }
 
       setLoading(false);
-      Alert.alert('Profile Updated', 'Your profile information has been updated successfully!');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      setLoading(false);
-      Alert.alert('Error', 'There was an issue updating your profile.');
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#a29bfe" />
+        <Text style={styles.loadingText}>Loading your profile...</Text>
+      </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.noUserText}>No user is logged in.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Update Your Profile</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Name"
-        value={name}
-        onChangeText={setName}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="CNIC"
-        value={cnic}
-        onChangeText={setCnic}
-        keyboardType="numeric"
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Phone Number"
-        value={phoneNumber}
-        onChangeText={setPhoneNumber}
-        keyboardType="phone-pad"
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Address"
-        value={address}
-        onChangeText={setAddress}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        editable={false} // Make it read-only if the email is fixed
-      />
-
-      <TouchableOpacity
-        style={styles.submitButton}
-        onPress={handleProfileUpdate}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>{loading ? 'Updating...' : 'Update Profile'}</Text>
-      </TouchableOpacity>
+      <View style={styles.card}>
+        <Text style={styles.header}>Profile Details</Text>
+        <Text style={styles.label}>Name</Text>
+        <Text style={styles.value}>{user.displayName || "N/A"}</Text>
+        <Text style={styles.label}>Email</Text>
+        <Text style={styles.value}>{user.email || "N/A"}</Text>
+        <Text style={styles.label}>CNIC</Text>
+        <Text style={styles.value}>{profile?.CNIC || "N/A"}</Text>
+        <Text style={styles.label}>Phone Number</Text>
+        <Text style={styles.value}>{profile?.PhoneNumber || "N/A"}</Text>
+        <Text style={styles.label}>Address</Text>
+        <Text style={styles.value}>{profile?.Address || "N/A"}</Text>
+      </View>
     </View>
   );
 };
@@ -131,40 +106,51 @@ const ProfileUpdatePage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#1e1e2c", // Dark background
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
+  card: {
+    width: "90%",
+    backgroundColor: "black", // Slightly lighter purple-black card
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8, // Shadow for Android
+  },
   header: {
-    fontSize: 26,
-    fontWeight: '700',
-    marginBottom: 30,
-    color: '#2D3E50',
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#a29bfe", // Vibrant purple for header
+    marginBottom: 20,
+    textAlign: "center",
   },
-  input: {
-    height: 50,
-    width: '100%',
-    borderColor: '#ddd',
-    borderWidth: 1.5,
-    borderRadius: 8,
-    marginBottom: 15,
-    paddingLeft: 15,
+  label: {
     fontSize: 16,
-    backgroundColor: '#fafafa',
+    fontWeight: "600",
+    color: "#dfe6e9", // Light gray for labels
+    marginTop: 15,
   },
-  submitButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 15,
-    paddingHorizontal: 40,
-    borderRadius: 25,
-    marginVertical: 10,
-  },
-  buttonText: {
+  value: {
     fontSize: 18,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: "400",
+    color: "purple", // White for profile values
+    marginTop: 5,
+  },
+  loadingText: {
+    fontSize: 18,
+    color: "#a29bfe",
+    marginTop: 10,
+  },
+  noUserText: {
+    fontSize: 18,
+    color: "#ffffff",
+    textAlign: "center",
   },
 });
 
-export default ProfileUpdatePage;
+export default ProfileScreen;

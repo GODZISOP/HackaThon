@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { TextInput, TouchableOpacity, StyleSheet, Text, View, ActivityIndicator, Image } from 'react-native';
+import { TextInput, TouchableOpacity, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../utilis/firebaseConfig';
 import { useState } from 'react';
@@ -8,38 +8,35 @@ const SignIn = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [cnic, setCnic] = useState('');  // New state for CNIC
-  const [phoneNumber, setPhoneNumber] = useState('');  // New state for Phone Number
-  const [address, setAddress] = useState('');  // New state for Address
-  const [isLoading, setIsLoading] = useState(false);  // Manage loading state
-  const [error, setError] = useState(null);  // Manage error state
+  const [cnic, setCnic] = useState(''); // New state for CNIC
+  const [phoneNumber, setPhoneNumber] = useState(''); // New state for Phone Number
+  const [address, setAddress] = useState(''); // New state for Address
+  const [isLoading, setIsLoading] = useState(false); // Manage loading state
+  const [error, setError] = useState(null); // Manage error state
 
   // Handle login process
   const handleLogin = async () => {
     if (!email || !password || !cnic || !phoneNumber || !address) {
-      setError("Please fill in all fields.");
+      setError('Please fill in all fields.');
       return;
     }
-    setIsLoading(true);  // Start loading
-    setError(null);  // Clear any previous errors
+    setIsLoading(true); // Start loading
+    setError(null); // Clear any previous errors
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log('User signed in:', userCredential.user.email);
-      router.push('/profile');  // Navigate to the Profile page
+      router.push('/profile'); // Navigate to the Profile page
     } catch (error) {
       console.error('Error signing in:', error.message);
-      setError("Invalid email or password.");  // Show error message
+      setError('Invalid email or password.'); // Show error message
     } finally {
-      setIsLoading(false);  // Stop loading after the process is complete
+      setIsLoading(false); // Stop loading after the process is complete
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* Image at the top */}
-      {/* <Image source={require('path-to-your-image.png')} style={styles.image} /> */}
-
       <Text style={styles.title}>Log In</Text>
 
       {/* Display error message if any */}
@@ -51,7 +48,7 @@ const SignIn = () => {
         placeholder="Email"
         placeholderTextColor="#aaa"
         keyboardType="email-address"
-        value={email}  // Binding input with state
+        value={email}
       />
       <TextInput
         style={styles.input}
@@ -59,7 +56,7 @@ const SignIn = () => {
         placeholder="Password"
         placeholderTextColor="#aaa"
         secureTextEntry
-        value={password}  // Binding input with state
+        value={password}
       />
       <TextInput
         style={styles.input}
@@ -67,7 +64,7 @@ const SignIn = () => {
         placeholder="CNIC"
         placeholderTextColor="#aaa"
         keyboardType="numeric"
-        value={cnic}  // Binding input with state
+        value={cnic}
       />
       <TextInput
         style={styles.input}
@@ -75,19 +72,19 @@ const SignIn = () => {
         placeholder="Phone Number"
         placeholderTextColor="#aaa"
         keyboardType="phone-pad"
-        value={phoneNumber}  // Binding input with state
+        value={phoneNumber}
       />
       <TextInput
         style={styles.input}
         onChangeText={setAddress}
         placeholder="Address"
         placeholderTextColor="#aaa"
-        value={address}  // Binding input with state
+        value={address}
       />
 
       {/* Show loading spinner while authenticating */}
       {isLoading ? (
-        <ActivityIndicator size="large" color="#4CAF50" style={styles.spinner} />
+        <ActivityIndicator size="large" color="#9b59b6" style={styles.spinner} />
       ) : (
         <TouchableOpacity style={styles.submitButton} onPress={handleLogin}>
           <Text style={styles.submitButtonText}>Sign In</Text>
@@ -107,42 +104,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f4f4f4',
-  },
-  image: {
-    width: 150,
-    height: 150,
-    marginBottom: 30,
-    borderRadius: 20,
-    borderWidth: 3,
-    borderColor: '#4CAF50',
-    shadowColor: '#000',  // Shadow for image
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
+    backgroundColor: '#1a1a1a', // Dark background
   },
   title: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#4CAF50',  // Green color for the title
+    color: '#e6e6e6', // Light text color
     marginBottom: 30,
     textAlign: 'center',
   },
   input: {
     width: '90%',
     height: 50,
-    borderColor: '#4CAF50',  // Green border color for inputs
+    borderColor: '#6c3483', // Purple border color
     borderWidth: 2,
     borderRadius: 25,
     paddingLeft: 15,
     marginBottom: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#2e2e2e', // Dark gray background for input
     fontSize: 16,
-    color: '#333',
+    color: '#e6e6e6', // Light text inside input
   },
   submitButton: {
     width: '90%',
-    backgroundColor: '#4CAF50',  // Green background color for the button
+    backgroundColor: '#8e44ad', // Vibrant purple button
     paddingVertical: 14,
     borderRadius: 25,
     alignItems: 'center',
@@ -160,13 +145,14 @@ const styles = StyleSheet.create({
   link: {
     marginTop: 15,
     fontSize: 16,
-    color: '#4CAF50',  // Green color for the link
+    color: '#9b59b6', // Soft purple color for the link
     textDecorationLine: 'underline',
   },
   errorText: {
-    color: 'red',
+    color: '#ff6b6b', // Light red for errors
     fontSize: 14,
     marginBottom: 15,
+    textAlign: 'center',
   },
   spinner: {
     marginTop: 20,
