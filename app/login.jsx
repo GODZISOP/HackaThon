@@ -1,162 +1,144 @@
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { TextInput, TouchableOpacity, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../utilis/firebaseConfig';
-import { useState } from 'react';
 
-const SignIn = () => {
-  const router = useRouter();
+const LoginScreen = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [cnic, setCnic] = useState(''); // New state for CNIC
-  const [phoneNumber, setPhoneNumber] = useState(''); // New state for Phone Number
-  const [address, setAddress] = useState(''); // New state for Address
-  const [isLoading, setIsLoading] = useState(false); // Manage loading state
-  const [error, setError] = useState(null); // Manage error state
+  const [loginCode, setLoginCode] = useState('');
+  const router = useRouter();
 
-  // Handle login process
   const handleLogin = async () => {
-    if (!email || !password || !cnic || !phoneNumber || !address) {
-      setError('Please fill in all fields.');
-      return;
-    }
-    setIsLoading(true); // Start loading
-    setError(null); // Clear any previous errors
+    console.log('Email:', email);
+    console.log('Login Code:', loginCode);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('User signed in:', userCredential.user.email);
-      router.push('/profile'); // Navigate to the Profile page
+      const response = await fetch('http://localhost:4001/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          loginCode: loginCode,
+        }),
+      });
+
+      console.log('Response Status:', response.status);
+      const data = await response.json();
+      console.log('Response Data:', data);
+
+      if (response.ok) {
+        Alert.alert('Login Successful', data.message);
+        console.log("Navigating to profile with email:", email);
+        
+        // Ensure the email is passed as query param correctly
+        router.push(`/profile?email=${encodeURIComponent(email)}`);
+        
+      } else {
+        Alert.alert('Error', data.message || 'An error occurred');
+      }
     } catch (error) {
-      console.error('Error signing in:', error.message);
-      setError('Invalid email or password.'); // Show error message
-    } finally {
-      setIsLoading(false); // Stop loading after the process is complete
+      console.error('Error:', error);
+      Alert.alert('Error', 'An unexpected error occurred.');
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Log In</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <View style={styles.innerContainer}>
+        <Text style={styles.header}>Welcome Back!</Text>
+        <Text style={styles.subHeader}>Login to your account</Text>
 
-      {/* Display error message if any */}
-      {error && <Text style={styles.errorText}>{error}</Text>}
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your email"
+          placeholderTextColor="#ddd"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
 
-      <TextInput
-        style={styles.input}
-        onChangeText={setEmail}
-        placeholder="Email"
-        placeholderTextColor="#aaa"
-        keyboardType="email-address"
-        value={email}
-      />
-      <TextInput
-        style={styles.input}
-        onChangeText={setPassword}
-        placeholder="Password"
-        placeholderTextColor="#aaa"
-        secureTextEntry
-        value={password}
-      />
-      <TextInput
-        style={styles.input}
-        onChangeText={setCnic}
-        placeholder="CNIC"
-        placeholderTextColor="#aaa"
-        keyboardType="numeric"
-        value={cnic}
-      />
-      <TextInput
-        style={styles.input}
-        onChangeText={setPhoneNumber}
-        placeholder="Phone Number"
-        placeholderTextColor="#aaa"
-        keyboardType="phone-pad"
-        value={phoneNumber}
-      />
-      <TextInput
-        style={styles.input}
-        onChangeText={setAddress}
-        placeholder="Address"
-        placeholderTextColor="#aaa"
-        value={address}
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your login code"
+          placeholderTextColor="#ddd"
+          value={loginCode}
+          onChangeText={setLoginCode}
+          secureTextEntry={true}
+          autoCapitalize="none"
+        />
 
-      {/* Show loading spinner while authenticating */}
-      {isLoading ? (
-        <ActivityIndicator size="large" color="#9b59b6" style={styles.spinner} />
-      ) : (
-        <TouchableOpacity style={styles.submitButton} onPress={handleLogin}>
-          <Text style={styles.submitButtonText}>Sign In</Text>
+        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+          <Text style={styles.loginButtonText}>Login</Text>
         </TouchableOpacity>
-      )}
 
-      <Text style={styles.link} onPress={() => router.push('/sign')}>
-        Don't have an account? Sign Up
-      </Text>
-    </View>
+        <TouchableOpacity>
+          <Text style={styles.forgotPasswordText}>Forgot your login code?</Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  innerContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#1a1a1a', // Dark background
   },
-  title: {
-    fontSize: 36,
+  header: {
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#e6e6e6', // Light text color
+    color: '#8A2BE2',
+    marginBottom: 10,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 5,
+  },
+  subHeader: {
+    fontSize: 16,
+    color: '#888',
     marginBottom: 30,
-    textAlign: 'center',
   },
   input: {
-    width: '90%',
+    width: '100%',
     height: 50,
-    borderColor: '#6c3483', // Purple border color
-    borderWidth: 2,
-    borderRadius: 25,
-    paddingLeft: 15,
-    marginBottom: 20,
-    backgroundColor: '#2e2e2e', // Dark gray background for input
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    marginBottom: 15,
     fontSize: 16,
-    color: '#e6e6e6', // Light text inside input
+    backgroundColor: '#fff',
   },
-  submitButton: {
-    width: '90%',
-    backgroundColor: '#8e44ad', // Vibrant purple button
-    paddingVertical: 14,
-    borderRadius: 25,
+  loginButton: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#8A2BE2',
+    borderRadius: 10,
+    justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
   },
-  submitButtonText: {
-    color: '#fff',
+  loginButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#fff',
   },
-  link: {
-    marginTop: 15,
-    fontSize: 16,
-    color: '#9b59b6', // Soft purple color for the link
-    textDecorationLine: 'underline',
-  },
-  errorText: {
-    color: '#ff6b6b', // Light red for errors
+  forgotPasswordText: {
     fontSize: 14,
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  spinner: {
-    marginTop: 20,
+    color: '#8A2BE2',
+    textDecorationLine: 'underline',
   },
 });
 
-export default SignIn;
+export default LoginScreen;

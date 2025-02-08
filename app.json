@@ -21,7 +21,8 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "proxy": "http://localhost:8081" 
     },
     "plugins": [
       "expo-router",
@@ -44,7 +45,8 @@
       },
       "eas": {
         "projectId": "4439c03b-947d-4e2e-b97f-ff22bffb2831"
-      }
+      },
+      "proxy": "http://localhost:4001" 
     }
   }
 }

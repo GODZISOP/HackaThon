@@ -1,156 +1,148 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, Image, Animated, Dimensions, TouchableOpacity } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
-const ProfileScreen = () => {
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
+const { height, width } = Dimensions.get('window');
+
+const Profile = () => {
+  const { email } = useLocalSearchParams();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
-
-  const auth = getAuth();
-  const db = getFirestore();
-
-  // Function to create/update user profile in Firestore
-  const createUserProfile = async (user) => {
-    try {
-      const userDocRef = doc(db, "users", user.uid);
-
-      const defaultProfile = {
-        CNIC: "",
-        PhoneNumber: "",
-        Address: "",
-        Email: user.email || "",
-      };
-
-      await setDoc(userDocRef, defaultProfile, { merge: true });
-      console.log("User profile created/updated in Firestore!");
-    } catch (error) {
-      console.error("Error creating user profile:", error);
-    }
-  };
-
-  // Function to fetch user profile from Firestore
-  const fetchUserProfile = async (uid) => {
-    try {
-      const userDocRef = doc(db, "users", uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (userDoc.exists()) {
-        setProfile(userDoc.data());
-        console.log("User profile fetched:", userDoc.data());
-      } else {
-        console.log("No profile found for user:", uid);
-      }
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-    }
-  };
+  const [userProfile, setUserProfile] = useState(null);
+  const [error, setError] = useState(null);
+  const fadeAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        console.log("User signed in:", currentUser.email);
-
-        await createUserProfile(currentUser);
-        await fetchUserProfile(currentUser.uid);
-      } else {
-        setUser(null);
-        setProfile(null);
-        console.log("No user is signed in.");
-      }
-
+    if (email) {
+      fetchProfileData(email);
+    } else {
+      setError('Email is required');
       setLoading(false);
-    });
+    }
+  }, [email]);
 
-    return () => unsubscribe();
-  }, []);
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
+  }, [userProfile]);
+
+  const fetchProfileData = async (email) => {
+    try {
+      const response = await fetch(`http://localhost:4001/profile?email=${encodeURIComponent(email)}`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Profile data fetch failed');
+      }
+      setUserProfile(data);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching profile data:', error);
+      setLoading(false);
+      setError(error.message);
+    }
+  };
 
   if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#a29bfe" />
-        <Text style={styles.loadingText}>Loading your profile...</Text>
-      </View>
-    );
+    return <ActivityIndicator size="large" color="#8A2BE2" style={styles.loader} />;
   }
 
-  if (!user) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.noUserText}>No user is logged in.</Text>
-      </View>
-    );
+  if (error) {
+    return <Text style={styles.text}>Error: {error}</Text>;
   }
+
+  if (!userProfile) {
+    return <Text style={styles.text}>No profile available.</Text>;
+  }
+
+  const { name, cnic, currentInstallment, email: userEmail, profilePicture } = userProfile;
 
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.header}>Profile Details</Text>
-        <Text style={styles.label}>Name</Text>
-        <Text style={styles.value}>{user.displayName || "N/A"}</Text>
-        <Text style={styles.label}>Email</Text>
-        <Text style={styles.value}>{user.email || "N/A"}</Text>
-        <Text style={styles.label}>CNIC</Text>
-        <Text style={styles.value}>{profile?.CNIC || "N/A"}</Text>
-        <Text style={styles.label}>Phone Number</Text>
-        <Text style={styles.value}>{profile?.PhoneNumber || "N/A"}</Text>
-        <Text style={styles.label}>Address</Text>
-        <Text style={styles.value}>{profile?.Address || "N/A"}</Text>
-      </View>
+      <Animated.View style={[styles.imageContainer, { opacity: fadeAnim }]}>
+        {/* Use the user's profile picture, or fallback to a default image */}
+        <Image
+          source={{ uri: profilePicture || '' }}  // If profilePicture is available, show it, else fallback
+          style={styles.profileImage}
+        />
+      </Animated.View>
+      <Animated.View style={[styles.infoContainer, { opacity: fadeAnim }]}>
+        <Text style={styles.name}>{name || 'Not available'}</Text>
+        <Text style={styles.email}>Email: {userEmail || email}</Text>
+        <Text style={styles.cnic}>CNIC: {cnic || 'Not available'}</Text>
+        <Text style={styles.installment}>Current Installment: {currentInstallment || 'Not available'}</Text>
+      </Animated.View>
+
+      {/* Loan Request Button */}
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => router.push({ 
+          pathname: "/loanreq", 
+          params: { 
+            email: userProfile.email, 
+            loanAmount: "50000",  // Example value
+            userId: userProfile._id // Ensure userId is included
+          } 
+        })}
+      >
+        <Text style={styles.buttonText}>Request Loan</Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  imageContainer: {
+    height: height * 0.45,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#8A2BE2',
+    borderBottomLeftRadius: 50,
+    borderBottomRightRadius: 50,
+  },
+  profileImage: { 
+    width: 180, 
+    height: 180, 
+    borderRadius: 90, // Round the profile picture
+    borderWidth: 4, 
+    borderColor: '#fff' 
+  },
+  infoContainer: {
     flex: 1,
-    backgroundColor: "#1e1e2c", // Dark background
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  card: {
-    width: "90%",
-    backgroundColor: "black", // Slightly lighter purple-black card
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: "#000",
+    padding: 30,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 50,
+    borderTopRightRadius: 50,
+    marginTop: -30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8, // Shadow for Android
+    shadowRadius: 10,
+    elevation: 5,
   },
-  header: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#a29bfe", // Vibrant purple for header
-    marginBottom: 20,
-    textAlign: "center",
+  name: { fontSize: width * 0.08, fontWeight: 'bold', color: '#8A2BE2', textAlign: 'center', marginBottom: 15 },
+  email: { fontSize: width * 0.05, color: '#4B0082', marginTop: 10, textAlign: 'center' },
+  cnic: { fontSize: width * 0.05, color: '#4B0082', marginTop: 10, textAlign: 'center' },
+  installment: { fontSize: width * 0.05, color: '#4B0082', marginTop: 10, textAlign: 'center' },
+  button: {
+    backgroundColor: '#8A2BE2',
+    padding: 15,
+    borderRadius: 10,
+    margin: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#dfe6e9", // Light gray for labels
-    marginTop: 15,
-  },
-  value: {
+  buttonText: {
+    color: '#fff',
     fontSize: 18,
-    fontWeight: "400",
-    color: "purple", // White for profile values
-    marginTop: 5,
+    fontWeight: 'bold',
   },
-  loadingText: {
-    fontSize: 18,
-    color: "#a29bfe",
-    marginTop: 10,
-  },
-  noUserText: {
-    fontSize: 18,
-    color: "#ffffff",
-    textAlign: "center",
-  },
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  text: { textAlign: 'center', fontSize: width * 0.05, color: 'red', marginTop: 20 },
 });
 
-export default ProfileScreen;
+export default Profile;
