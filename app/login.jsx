@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, Image, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 
 const LoginScreen = () => {
@@ -48,7 +48,13 @@ const LoginScreen = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <View style={styles.innerContainer}>
+      <ScrollView contentContainerStyle={styles.innerContainer}>
+        {/* Centered Image at the top */}
+        <Image
+          source={require('../assets/images/sign.gif')} // Make sure to replace the path with your local image
+          style={styles.image}
+        />
+
         <Text style={styles.header}>Welcome Back!</Text>
         <Text style={styles.subHeader}>Login to your account</Text>
 
@@ -79,7 +85,7 @@ const LoginScreen = () => {
         <TouchableOpacity>
           <Text style={styles.forgotPasswordText}>Forgot your login code?</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };
@@ -87,7 +93,7 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f0f0f0', // Grey background for the form
   },
   innerContainer: {
     flex: 1,
@@ -95,10 +101,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  image: {
+    width: '60%', // Adjust the image width to fit the screen better
+    height: 150,  // Adjust height as needed
+    marginBottom: 30, // Add some space below the image
+    alignSelf: 'center', // Center image horizontally
+  },
   header: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#8A2BE2',
+    color: '#8A2BE2', // Purple header text color
     marginBottom: 10,
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 1, height: 1 },
@@ -123,7 +135,7 @@ const styles = StyleSheet.create({
   loginButton: {
     width: '100%',
     height: 50,
-    backgroundColor: '#8A2BE2',
+    backgroundColor: '#8A2BE2', // Purple login button
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',

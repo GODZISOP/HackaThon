@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import axios from 'axios'; // Import axios for API requests
 
@@ -64,7 +64,13 @@ const LoanFormPage = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
+      {/* Add a Local Image at the top of the form, centered */}
+      <Image
+        source={require('../assets/images/sign.gif')} // Replace with the path to your local image
+        style={styles.image}
+      />
+
       <Text style={styles.header}>Loan Application Form</Text>
 
       <Text style={styles.info}>
@@ -148,15 +154,21 @@ const LoanFormPage = () => {
       <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
         <Text style={styles.buttonText}>Submit</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 20,
-    backgroundColor: '#f5f5f5', // Light background color for the main container
+    backgroundColor: '#f0f0f0', // Grey background for the form area
+  },
+  image: {
+    width: '40%', // Adjusted image size for better fitting
+    height: 150, // Adjust the height to fit mobile screens
+    alignSelf: 'center', // Center the image horizontally
+    marginBottom: 20, // Space below the image
   },
   header: {
     fontSize: 26,
@@ -177,7 +189,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: '#8A2BE2', // Purple border color
-    backgroundColor: '#fff',
+    backgroundColor: '#fff', // White background for inputs
     color: '#333',
     padding: 12,
     borderRadius: 10,

@@ -64,8 +64,9 @@ const Profile = () => {
       <Animated.View style={[styles.imageContainer, { opacity: fadeAnim }]}>
         {/* Use the user's profile picture, or fallback to a default image */}
         <Image
-          source={{ uri: profilePicture || '' }}  // If profilePicture is available, show it, else fallback
+          source={profilePicture ? { uri: profilePicture } : require('../assets/images/CASH.gif')}  // Fallback image should be in the correct format
           style={styles.profileImage}
+          resizeMode="cover"  // Ensures the image is covered inside the circular container
         />
       </Animated.View>
       <Animated.View style={[styles.infoContainer, { opacity: fadeAnim }]}>
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
   profileImage: { 
     width: 180, 
     height: 180, 
-    borderRadius: 90, // Round the profile picture
+    borderRadius: 90, // Ensures the image is round
     borderWidth: 4, 
     borderColor: '#fff' 
   },
