@@ -15,11 +15,13 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import axios from 'axios';
-import { Ionicons } from '@expo/vector-icons'; // Make sure to install expo/vector-icons
+import { Ionicons } from '@expo/vector-icons';
 
 const LoanFormPage = () => {
   const { category, subcategory } = useLocalSearchParams();
   const router = useRouter();
+
+  // State variables
   const [loanAmount, setLoanAmount] = useState('');
   const [initialDeposit, setInitialDeposit] = useState('');
   const [loanDuration, setLoanDuration] = useState('12');
@@ -31,92 +33,51 @@ const LoanFormPage = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const baseUrl = "http://192.168.100.143:4001";
 
-  // Handle navigation to login page
-  const navigateToLogin = () => {
-    router.push('/login');
-  };
+  const baseUrl = "http://192.168.100.144:4001";
 
-  // Format currency input
-  const formatCurrency = (value) => {
-    if (!value) return '';
-    return value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  };
-
-  // Convert formatted currency back to number
-  const unformatCurrency = (value) => {
-    if (!value) return '';
-    return value.replace(/,/g, '');
-  };
-
-  // Function to calculate monthly installment with animation
-  const calculateInstallment = () => {
-    if (!loanAmount || !loanDuration) {
-      Alert.alert('Missing Information', 'Please enter both loan amount and duration.');
-      return;
+  // Helper functions
+  const checkUserExists = async (email, cnic) => {
+    try {
+      const response = await fetch(`http://localhost:4001/api/check-user?email=${email}&cnic=${cnic}`);
+      const data = await response.json();
+      return response.status === 400 ? alert(data.message) : false;
+    } catch (error) {
+      console.error("Error checking user:", error);
+      return false;
     }
-    
-    setIsCalculating(true);
-    const amount = parseFloat(unformatCurrency(loanAmount));
-    const duration = parseInt(loanDuration, 10);
-
-    if (isNaN(amount) || isNaN(duration) || duration <= 0) {
-      Alert.alert('Invalid Input', 'Please check your loan amount and duration values.');
-      setIsCalculating(false);
-      return;
-    }
-
-    // Simulate calculation delay for better UX
-    setTimeout(() => {
-      const installment = (amount / duration).toFixed(2);
-      setMonthlyInstallment(formatCurrency(installment));
-      setIsCalculating(false);
-    }, 800);
   };
 
-  // Format CNIC with dashes
+  const formatCurrency = (value) => value?.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  const unformatCurrency = (value) => value?.replace(/,/g, '');
+
   const formatCNIC = (text) => {
-    // Remove all non-digits
     const digits = text.replace(/\D/g, '');
-    
-    // Add dashes in the CNIC format (00000-0000000-0)
-    let formattedCNIC = '';
-    if (digits.length <= 5) {
-      formattedCNIC = digits;
-    } else if (digits.length <= 12) {
-      formattedCNIC = `${digits.slice(0, 5)}-${digits.slice(5)}`;
-    } else {
-      formattedCNIC = `${digits.slice(0, 5)}-${digits.slice(5, 12)}-${digits.slice(12, 13)}`;
-    }
-    
-    return formattedCNIC;
+    return digits.length <= 5
+      ? digits
+      : digits.length <= 12
+        ? `${digits.slice(0, 5)}-${digits.slice(5)}`
+        : `${digits.slice(0, 5)}-${digits.slice(5, 12)}-${digits.slice(12, 13)}`;
   };
 
-  // Validate form before submission
   const validateForm = () => {
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cnicRegex = /^\d{5}-\d{7}-\d{1}$/;
+    const isPasswordValid = password.length >= 8 && /\d/.test(password) && /[a-zA-Z]/.test(password);
+
     if (!emailRegex.test(email)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return false;
     }
-
-    // CNIC validation
-    const cnicRegex = /^\d{5}-\d{7}-\d{1}$/;
     if (!cnicRegex.test(cnic)) {
       Alert.alert('Invalid CNIC', 'Please enter a valid CNIC in the format 00000-0000000-0.');
       return false;
     }
-
-    // Password validation (at least 8 characters with numbers and letters)
-    if (password.length < 8 || !/\d/.test(password) || !/[a-zA-Z]/.test(password)) {
+    if (!isPasswordValid) {
       Alert.alert('Weak Password', 'Password must be at least 8 characters and include both letters and numbers.');
       return false;
     }
-
-    // Ensure all required fields are filled
     if (!name || !email || !cnic || !password || !loanAmount || !initialDeposit || !loanDuration) {
       Alert.alert('Missing Information', 'Please fill in all required fields.');
       return false;
@@ -125,12 +86,11 @@ const LoanFormPage = () => {
     return true;
   };
 
-  // Handle form submission
+  // Form submission
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    
+  
     setIsSubmitting(true);
-    
     const userData = {
       name,
       email,
@@ -141,12 +101,25 @@ const LoanFormPage = () => {
       loanDuration,
       monthlyInstallment: monthlyInstallment ? unformatCurrency(monthlyInstallment) : '',
     };
-    
+  
     try {
+      // Check if the user already exists by email or CNIC
+      const checkResponse = await axios.get(`${baseUrl}/api/check-user`, { params: { email, cnic } });
+      
+      if (checkResponse.data.exists) {
+        Alert.alert(
+          'Already Registered',
+          'You are already registered with this email or CNIC. Please log in.',
+          [{ text: 'OK', onPress: () => router.push('/login') }]
+        );
+        setIsSubmitting(false);
+        return;
+      }
+  
       const res = await axios.post(`${baseUrl}/api/submit`, userData);
       if (res.status === 200) {
         Alert.alert(
-          'Application Submitted', 
+          'Application Submitted',
           'Your loan application has been successfully submitted. You will be redirected to login.',
           [{ text: 'OK', onPress: () => router.push('/login') }]
         );
@@ -154,14 +127,39 @@ const LoanFormPage = () => {
     } catch (error) {
       console.error('Error submitting loan form:', error);
       Alert.alert(
-        'Submission Failed', 
+        'Submission Failed',
         `We couldn't process your application. ${error.response?.data?.message || 'Please try again later.'}`
       );
     } finally {
       setIsSubmitting(false);
     }
   };
+  
+  // Monthly installment calculation
+  const calculateInstallment = () => {
+    if (!loanAmount || !loanDuration) {
+      Alert.alert('Missing Information', 'Please enter both loan amount and duration.');
+      return;
+    }
 
+    setIsCalculating(true);
+    const amount = parseFloat(unformatCurrency(loanAmount));
+    const duration = parseInt(loanDuration, 10);
+
+    if (isNaN(amount) || isNaN(duration) || duration <= 0) {
+      Alert.alert('Invalid Input', 'Please check your loan amount and duration values.');
+      setIsCalculating(false);
+      return;
+    }
+
+    setTimeout(() => {
+      const installment = (amount / duration).toFixed(2);
+      setMonthlyInstallment(formatCurrency(installment));
+      setIsCalculating(false);
+    }, 800);
+  };
+
+  // Handlers for input changes
   const handleLoanAmountChange = (text) => {
     const unformatted = unformatCurrency(text);
     if (unformatted === '' || /^\d+$/.test(unformatted)) {
@@ -176,37 +174,28 @@ const LoanFormPage = () => {
     }
   };
 
-  const handleCNICChange = (text) => {
-    setCnic(formatCNIC(text));
-  };
-  
+  const handleCNICChange = (text) => setCnic(formatCNIC(text));
+
+  // Navigation to login
+  const navigateToLogin = () => router.push('/login');
+
   return (
     <View style={{ flex: 1 }}>
       <StatusBar barStyle="dark-content" backgroundColor="#f9f9f9" />
-      
+
       {/* Floating Login Button */}
-      <TouchableOpacity 
-        style={styles.loginButton} 
-        onPress={navigateToLogin}
-        activeOpacity={0.8}
-      >
+      <TouchableOpacity style={styles.loginButton} onPress={navigateToLogin} activeOpacity={0.8}>
         <Ionicons name="log-in-outline" size={20} color="#fff" />
         <Text style={styles.loginButtonText}>Login</Text>
       </TouchableOpacity>
-      
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
+
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.container}>
-          <Image
-            source={require('../assets/images/sign.gif')}
-            style={styles.image}
-            resizeMode="contain"
-          />
+          <Image source={require('../assets/images/sign.gif')} style={styles.image} resizeMode="contain" />
 
           <Text style={styles.header}>Loan Application</Text>
 
+          {/* Category Section */}
           <View style={styles.categoryContainer}>
             <View style={styles.categoryItem}>
               <Text style={styles.categoryLabel}>Category</Text>
@@ -219,151 +208,132 @@ const LoanFormPage = () => {
             </View>
           </View>
 
+          {/* Personal Information Form */}
           <View style={styles.formSection}>
             <Text style={styles.sectionTitle}>Personal Information</Text>
-            
-            <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Full Name"
-                placeholderTextColor="#999"
-                value={name}
-                onChangeText={setName}
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email Address"
-                placeholderTextColor="#999"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <Ionicons name="card-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="CNIC (e.g., 12345-6789012-3)"
-                placeholderTextColor="#999"
-                value={cnic}
-                onChangeText={handleCNICChange}
-                keyboardType="numeric"
-                maxLength={15}
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Create Password"
-                placeholderTextColor="#999"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!isPasswordVisible}
-              />
-              <TouchableOpacity 
-                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-                style={styles.passwordToggle}
-              >
-                <Ionicons 
-                  name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
-                  size={20} 
-                  color="#666" 
-                />
-              </TouchableOpacity>
-            </View>
+            <FormInput
+              icon="person-outline"
+              placeholder="Full Name"
+              value={name}
+              onChangeText={setName}
+            />
+            <FormInput
+              icon="mail-outline"
+              placeholder="Email Address"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+            />
+            <FormInput
+              icon="card-outline"
+              placeholder="CNIC (e.g., 12345-6789012-3)"
+              value={cnic}
+              onChangeText={handleCNICChange}
+              keyboardType="numeric"
+              maxLength={15}
+            />
+            <FormInput
+              icon="lock-closed-outline"
+              placeholder="Create Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!isPasswordVisible}
+              passwordToggle
+              onTogglePassword={() => setIsPasswordVisible(!isPasswordVisible)}
+            />
           </View>
 
+          {/* Loan Details Form */}
           <View style={styles.formSection}>
             <Text style={styles.sectionTitle}>Loan Details</Text>
-            
-            <View style={styles.inputContainer}>
-              <Ionicons name="cash-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Loan Amount (PKR)"
-                placeholderTextColor="#999"
-                value={loanAmount}
-                onChangeText={handleLoanAmountChange}
-                keyboardType="numeric"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <Ionicons name="wallet-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Initial Deposit (PKR)"
-                placeholderTextColor="#999"
-                value={initialDeposit}
-                onChangeText={handleInitialDepositChange}
-                keyboardType="numeric"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <Ionicons name="calendar-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Loan Duration (months)"
-                placeholderTextColor="#999"
-                value={loanDuration}
-                onChangeText={setLoanDuration}
-                keyboardType="numeric"
-              />
-            </View>
-
-            <TouchableOpacity 
-              style={[styles.calculateButton, isCalculating && styles.buttonDisabled]}
-              onPress={calculateInstallment}
-              disabled={isCalculating}
-            >
-              {isCalculating ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Calculate Monthly Payment</Text>
-              )}
-            </TouchableOpacity>
-
-            {monthlyInstallment && (
-              <View style={styles.resultCard}>
-                <Text style={styles.resultLabel}>Monthly Payment</Text>
-                <Text style={styles.resultValue}>PKR {monthlyInstallment}</Text>
-              </View>
-            )}
+            <FormInput
+              icon="cash-outline"
+              placeholder="Loan Amount (PKR)"
+              value={loanAmount}
+              onChangeText={handleLoanAmountChange}
+              keyboardType="numeric"
+            />
+            <FormInput
+              icon="wallet-outline"
+              placeholder="Initial Deposit (PKR)"
+              value={initialDeposit}
+              onChangeText={handleInitialDepositChange}
+              keyboardType="numeric"
+            />
+            <FormInput
+              icon="calendar-outline"
+              placeholder="Loan Duration (months)"
+              value={loanDuration}
+              onChangeText={setLoanDuration}
+              keyboardType="numeric"
+            />
+            <CalculateButton isCalculating={isCalculating} onPress={calculateInstallment} />
+            {monthlyInstallment && <MonthlyInstallment result={monthlyInstallment} />}
           </View>
 
-          <TouchableOpacity 
-            style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Text style={styles.submitButtonText}>Submit Application</Text>
-                <Ionicons name="arrow-forward" size={20} color="#fff" style={styles.submitIcon} />
-              </>
-            )}
-          </TouchableOpacity>
-          
-          <Text style={styles.disclaimer}>
-            By submitting this form, you agree to our Terms & Conditions and Privacy Policy.
-          </Text>
+          {/* Submit Button */}
+          <SubmitButton isSubmitting={isSubmitting} onPress={handleSubmit} />
+          <Disclaimer />
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
 };
+
+// Helper components for form inputs
+const FormInput = ({ icon, placeholder, value, onChangeText, keyboardType, maxLength, secureTextEntry, passwordToggle, onTogglePassword }) => (
+  <View style={styles.inputContainer}>
+    <Ionicons name={icon} size={20} color="#666" style={styles.inputIcon} />
+    <TextInput
+      style={styles.input}
+      placeholder={placeholder}
+      placeholderTextColor="#999"
+      value={value}
+      onChangeText={onChangeText}
+      keyboardType={keyboardType}
+      maxLength={maxLength}
+      secureTextEntry={secureTextEntry}
+    />
+    {passwordToggle && (
+      <TouchableOpacity onPress={onTogglePassword} style={styles.passwordToggle}>
+        <Ionicons name="eye-outline" size={20} color="#666" />
+      </TouchableOpacity>
+    )}
+  </View>
+);
+
+const CalculateButton = ({ isCalculating, onPress }) => (
+  <TouchableOpacity style={[styles.calculateButton, isCalculating && styles.buttonDisabled]} onPress={onPress} disabled={isCalculating}>
+    {isCalculating ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.buttonText}>Calculate Monthly Payment</Text>}
+  </TouchableOpacity>
+);
+
+const MonthlyInstallment = ({ result }) => (
+  <View style={styles.resultCard}>
+    <Text style={styles.resultLabel}>Monthly Payment</Text>
+    <Text style={styles.resultValue}>PKR {result}</Text>
+  </View>
+);
+
+const SubmitButton = ({ isSubmitting, onPress }) => (
+  <TouchableOpacity style={[styles.submitButton, isSubmitting && styles.buttonDisabled]} onPress={onPress} disabled={isSubmitting}>
+    {isSubmitting ? (
+      <ActivityIndicator size="small" color="#fff" />
+    ) : (
+      <>
+        <Text style={styles.submitButtonText}>Submit Application</Text>
+        <Ionicons name="arrow-forward" size={20} color="#fff" style={styles.submitIcon} />
+      </>
+    )}
+  </TouchableOpacity>
+);
+
+const Disclaimer = () => (
+  <Text style={styles.disclaimer}>
+    By submitting this form, you agree to our Terms & Conditions and Privacy Policy.
+  </Text>
+);
+
 
 const styles = StyleSheet.create({
   container: {

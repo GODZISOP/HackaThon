@@ -34,6 +34,7 @@ const LoginScreen = () => {
     const checkLoginStatus = async () => {
       try {
         const storedEmail = await AsyncStorage.getItem('userEmail');
+        console.log('Stored Email:', storedEmail);  // Log stored email for debugging
         if (storedEmail) {
           router.push(`/profile?email=${encodeURIComponent(storedEmail)}`);
         }
@@ -41,11 +42,10 @@ const LoginScreen = () => {
         console.error("Error checking login status:", error);
       }
     };
-
+  
     checkLoginStatus();
   }, []);
-
-  const baseUrl = "http://192.168.100.143:4001"; // Ensure the IP is correct
+  const baseUrl = "http://192.168.100.144:4001"; // Ensure the IP is correct
   const TIMEOUT = 30000; // Timeout in milliseconds (30 seconds)
 
   const handleLogin = async () => {
@@ -79,8 +79,8 @@ const LoginScreen = () => {
         { email, loginCode },
         { timeout: TIMEOUT }
       );
-      console.log('✅ Response:', res.data);
-    
+      console.log('✅ Response:', res.data);  // Log the entire response
+
       if (res.status === 200) {
         Alert.alert('Login Successful', res.data.message);
         await AsyncStorage.setItem('userEmail', email);
@@ -91,7 +91,10 @@ const LoginScreen = () => {
       }
     } catch (error) {
       console.error('❌ Login Error:', error);
-    
+
+      // Log error details to help debugging
+      console.log("Error details:", error.response || error.message);
+
       if (!error.response) {
         // This happens when there is no response (e.g., network error)
         Alert.alert('Network Error', 'Please check your internet connection and try again.');
@@ -100,12 +103,12 @@ const LoginScreen = () => {
         const msg = error.response?.data?.message || error.message || 'An unexpected error occurred.';
         Alert.alert('Error', msg);
       }
-    
+
       setErrorMessage(error.response?.data?.message || error.message || 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
     }
-  };
+};
 
   return (
     <KeyboardAvoidingView

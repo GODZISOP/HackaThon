@@ -16,11 +16,10 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
-const BASE_URL = "http://192.168.100.143:4001";
+const BASE_URL = "http://192.168.100.144:4001";
 
 const Profile = () => {
   const { email } = useLocalSearchParams();
@@ -32,17 +31,38 @@ const Profile = () => {
   const fadeAnim = new Animated.Value(0);
   const translateY = new Animated.Value(50);
 
-  useEffect(() => {
-    if (email) {
-      fetchProfileData(email);
-    } else {
-      setError('Email is required');
-      setLoading(false);
+  // Fetch profile data from AsyncStorage
+  const fetchStoredProfile = async () => {
+    try {
+      const storedProfile = await AsyncStorage.getItem('userProfile');
+      if (storedProfile) {
+        // If profile exists in AsyncStorage, use it and stop loading
+        setUserProfile(JSON.parse(storedProfile));
+        setLoading(false);
+      } else if (email) {
+        // If no profile in AsyncStorage, fetch from API
+        setLoading(true);  // Set loading true only when necessary
+        await fetchProfileData(email);
+      } else {
+        setLoading(false); // No profile and no email
+        setError('No profile found.');
+      }
+    } catch (error) {
+      console.error('Error fetching stored profile:', error);
+      setLoading(false); // Ensure loading is stopped even on error
+      setError('Failed to fetch profile from storage.');
+      if (email) {
+        await fetchProfileData(email);  // Attempt to fetch profile from API if error occurs
+      }
     }
+  };
+  
+  useEffect(() => {
+    fetchStoredProfile();
   }, [email]);
 
   useEffect(() => {
-    if (!loading) {
+    if (userProfile) { // Only trigger animation when profile data is available
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -53,10 +73,10 @@ const Profile = () => {
           toValue: 0,
           duration: 800,
           useNativeDriver: true,
-        })
+        }),
       ]).start();
     }
-  }, [loading]);
+  }, [userProfile]); // Trigger animation when userProfile is updated
 
   const fetchProfileData = async (email) => {
     try {
@@ -67,6 +87,8 @@ const Profile = () => {
       }
       setUserProfile(data);
       setLoading(false);
+      // Save fetched profile data to AsyncStorage
+      await AsyncStorage.setItem('userProfile', JSON.stringify(data));
     } catch (error) {
       console.error('Error fetching profile data:', error);
       setLoading(false);
@@ -82,6 +104,7 @@ const Profile = () => {
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('userEmail');
+      await AsyncStorage.removeItem('userProfile'); // Remove profile data on logout
       router.replace('/');
     } catch (error) {
       console.error('Error logging out:', error);
@@ -108,7 +131,7 @@ const Profile = () => {
     </Animated.View>
   );
 
-  if (loading) {
+  if (loading || !userProfile) {
     return (
       <View style={styles.loaderContainer}>
         <LinearGradient

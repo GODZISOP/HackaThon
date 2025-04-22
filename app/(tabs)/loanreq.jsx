@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+// You'll need to install expo-linear-gradient:
+// expo install expo-linear-gradient
 
 const LoanRequestScreen = () => {
   const params = useLocalSearchParams();
+  const [activeStep, setActiveStep] = useState(1);
+  const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
     email: params.email || "",
@@ -26,8 +31,22 @@ const LoanRequestScreen = () => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const nextStep = () => {
+    if (activeStep < 4) {
+      setActiveStep(activeStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (activeStep > 1) {
+      setActiveStep(activeStep - 1);
+    }
+  };
+
   const handleSubmit = async () => {
     try {
+      setLoading(true);
+      
       const payload = {
         email: form.email,
         loanAmount: form.loanAmount,
@@ -51,125 +70,453 @@ const LoanRequestScreen = () => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Submission failed');
 
-      Alert.alert('✅ Success', 'Loan request submitted successfully');
+      setLoading(false);
+      Alert.alert('Success', 'Your loan request has been submitted successfully');
     } catch (error) {
-      Alert.alert('❌ Error', error.message);
+      setLoading(false);
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const renderInputField = (label, placeholder, key, keyboardType = "default", isSecure = false) => (
+    <View style={styles.inputContainer}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <View style={styles.inputWrapper}>
+        <TextInput
+          style={styles.textInput}
+          placeholder={placeholder}
+          value={form[key]}
+          onChangeText={(val) => handleChange(key, val)}
+          keyboardType={keyboardType}
+          secureTextEntry={isSecure}
+          placeholderTextColor="#A0AEC0"
+        />
+      </View>
+    </View>
+  );
+
+  const renderNonEditableField = (label, value) => (
+    <View style={styles.inputContainer}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <View style={styles.nonEditableWrapper}>
+        <Text style={styles.nonEditableText}>{value}</Text>
+      </View>
+    </View>
+  );
+
+  // Updated GradientButton to use actual LinearGradient
+  const GradientButton = ({ onPress, text, disabled, style }) => (
+    <TouchableOpacity 
+      style={[styles.gradientButtonContainer, style, disabled && styles.disabledButton]} 
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <LinearGradient
+        colors={['#6a11cb', '#2575fc']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.gradientButton}
+      >
+        <Text style={styles.buttonText}>{text}</Text>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+
+  const renderProgressBar = () => (
+    <View style={styles.progressContainer}>
+      {[1, 2, 3, 4].map((step) => (
+        <View key={step} style={styles.progressStepContainer}>
+          <View style={[
+            styles.progressStep,
+            step < activeStep ? styles.progressStepCompleted : 
+            step === activeStep ? styles.progressStepActive : 
+            styles.progressStepInactive
+          ]}>
+            {step < activeStep ? (
+              <Text style={styles.progressStepTextCompleted}>✓</Text>
+            ) : (
+              <Text style={step === activeStep ? styles.progressStepTextActive : styles.progressStepTextInactive}>{step}</Text>
+            )}
+          </View>
+          {step < 4 && (
+            <View style={[
+              styles.progressLine,
+              step < activeStep ? styles.progressLineCompleted : styles.progressLineInactive
+            ]} />
+          )}
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderStepContent = () => {
+    switch (activeStep) {
+      case 1:
+        return (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>Loan Information</Text>
+            <Text style={styles.stepDescription}>Enter your loan request details</Text>
+            
+            {/* Changed to editable fields */}
+            {renderInputField("Email", "Enter your email address", "email", "email-address")}
+            {renderInputField("Loan Amount", "Enter requested loan amount", "loanAmount", "numeric")}
+            {renderInputField("User ID", "Enter your user ID", "userId")}
+            
+            <GradientButton 
+              text="Continue" 
+              onPress={nextStep} 
+              style={{ marginTop: 20 }}
+            />
+          </View>
+        );
+      case 2:
+        return (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>First Guarantor</Text>
+            <Text style={styles.stepDescription}>Please provide your first guarantor's information</Text>
+            
+            {renderInputField("Full Name", "Enter guarantor's full name", "guarantor1Name")}
+            {renderInputField("Email Address", "Enter guarantor's email", "guarantor1Email", "email-address")}
+            {renderInputField("Location", "Enter guarantor's location", "guarantor1Location")}
+            {renderInputField("CNIC Number", "Enter guarantor's CNIC", "guarantor1Cnic")}
+            
+            <View style={styles.buttonRow}>
+              <TouchableOpacity style={styles.secondaryButton} onPress={prevStep}>
+                <Text style={styles.secondaryButtonText}>Back</Text>
+              </TouchableOpacity>
+              <GradientButton 
+                text="Continue" 
+                onPress={nextStep} 
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        );
+      case 3:
+        return (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>Second Guarantor</Text>
+            <Text style={styles.stepDescription}>Please provide your second guarantor's information</Text>
+            
+            {renderInputField("Full Name", "Enter guarantor's full name", "guarantor2Name")}
+            {renderInputField("Email Address", "Enter guarantor's email", "guarantor2Email", "email-address")}
+            {renderInputField("Location", "Enter guarantor's location", "guarantor2Location")}
+            {renderInputField("CNIC Number", "Enter guarantor's CNIC", "guarantor2Cnic")}
+            
+            <View style={styles.buttonRow}>
+              <TouchableOpacity style={styles.secondaryButton} onPress={prevStep}>
+                <Text style={styles.secondaryButtonText}>Back</Text>
+              </TouchableOpacity>
+              <GradientButton 
+                text="Continue" 
+                onPress={nextStep} 
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        );
+      case 4:
+        return (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>Your Details</Text>
+            <Text style={styles.stepDescription}>Please provide your personal information</Text>
+            
+            {renderInputField("Address", "Enter your complete address", "address")}
+            {renderInputField("Phone Number", "Enter your phone number", "phoneNumber", "phone-pad")}
+            
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Additional Statement (Optional)</Text>
+              <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  placeholder="Any additional information you'd like to share"
+                  value={form.statement}
+                  onChangeText={(val) => handleChange('statement', val)}
+                  multiline={true}
+                  numberOfLines={4}
+                  placeholderTextColor="#A0AEC0"
+                />
+              </View>
+            </View>
+            
+            <View style={styles.buttonRow}>
+              <TouchableOpacity style={styles.secondaryButton} onPress={prevStep}>
+                <Text style={styles.secondaryButtonText}>Back</Text>
+              </TouchableOpacity>
+              <GradientButton 
+                text={loading ? "Submitting..." : "Submit Application"}
+                onPress={handleSubmit}
+                disabled={loading}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        );
+      default:
+        return null;
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.heading}>Loan Request</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>Email:</Text>
-        <Text style={styles.text}>{form.email}</Text>
-
-        <Text style={styles.label}>Loan Amount:</Text>
-        <Text style={styles.text}>{form.loanAmount}</Text>
-
-        <Text style={styles.label}>User ID:</Text>
-        <Text style={styles.text}>{form.userId}</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : null}
+      style={{ flex: 1 }}
+    >
+      <StatusBar barStyle="light-content" backgroundColor="#6a11cb" />
+      <View style={styles.container}>
+        {/* Header with Gradient - Fixed implementation */}
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#6a11cb', '#2575fc']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.headerBackground}
+          >
+            <View style={styles.header}>
+              <Text style={styles.headerTitle}>Loan Application</Text>
+              <Text style={styles.headerSubtitle}>Step {activeStep} of 4</Text>
+            </View>
+          </LinearGradient>
+        </View>
+        
+        {renderProgressBar()}
+        
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollViewContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {renderStepContent()}
+          
+          <View style={styles.securityNote}>
+            <Text style={styles.securityText}>Your information is secure and encrypted</Text>
+          </View>
+        </ScrollView>
       </View>
-
-      {/* Guarantor 1 */}
-      <View style={styles.card}>
-        <Text style={styles.subHeading}>Guarantor 1</Text>
-        <TextInput style={styles.input} placeholder="Name" onChangeText={(val) => handleChange('guarantor1Name', val)} />
-        <TextInput style={styles.input} placeholder="Email" onChangeText={(val) => handleChange('guarantor1Email', val)} />
-        <TextInput style={styles.input} placeholder="Location" onChangeText={(val) => handleChange('guarantor1Location', val)} />
-        <TextInput style={styles.input} placeholder="CNIC" onChangeText={(val) => handleChange('guarantor1Cnic', val)} />
-      </View>
-
-      {/* Guarantor 2 */}
-      <View style={styles.card}>
-        <Text style={styles.subHeading}>Guarantor 2</Text>
-        <TextInput style={styles.input} placeholder="Name" onChangeText={(val) => handleChange('guarantor2Name', val)} />
-        <TextInput style={styles.input} placeholder="Email" onChangeText={(val) => handleChange('guarantor2Email', val)} />
-        <TextInput style={styles.input} placeholder="Location" onChangeText={(val) => handleChange('guarantor2Location', val)} />
-        <TextInput style={styles.input} placeholder="CNIC" onChangeText={(val) => handleChange('guarantor2Cnic', val)} />
-      </View>
-
-      {/* Personal Information */}
-      <View style={styles.card}>
-        <Text style={styles.subHeading}>Personal Information</Text>
-        <TextInput style={styles.input} placeholder="Address" onChangeText={(val) => handleChange('address', val)} />
-        <TextInput style={styles.input} placeholder="Phone Number" onChangeText={(val) => handleChange('phoneNumber', val)} />
-        <TextInput style={styles.input} placeholder="Statement (Optional)" onChangeText={(val) => handleChange('statement', val)} />
-      </View>
-
-      {/* Submit Button */}
-      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-        <Text style={styles.buttonText}>Submit Loan Request</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    </KeyboardAvoidingView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    backgroundColor: '#fff', // White background
+    flex: 1,
+    backgroundColor: '#F7FAFC',
   },
-  heading: {
+  headerContainer: {
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden', // Important for rounded corners with LinearGradient
+    shadowColor: '#6a11cb',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 15,
+  },
+  headerBackground: {
+    width: '100%',
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  headerTitle: {
     fontSize: 26,
     fontWeight: 'bold',
+    color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 20,
-    color: '#5F4B8B', // Purple color for heading
   },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginTop: 5,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: -15,
+    paddingHorizontal: 30,
+    zIndex: 1,
+  },
+  progressStepContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  progressStep: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  progressStepCompleted: {
+    backgroundColor: '#2575fc',
+  },
+  progressStepActive: {
+    backgroundColor: '#6a11cb',
+  },
+  progressStepInactive: {
+    backgroundColor: '#E2E8F0',
+  },
+  progressStepTextCompleted: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  progressStepTextActive: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  progressStepTextInactive: {
+    color: '#718096',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  progressLine: {
+    flex: 1,
+    height: 3,
+    marginHorizontal: -5,
+    zIndex: 1,
+  },
+  progressLineCompleted: {
+    backgroundColor: '#2575fc',
+  },
+  progressLineInactive: {
+    backgroundColor: '#E2E8F0',
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#F7FAFC',
+  },
+  scrollViewContent: {
+    paddingBottom: 40,
+  },
+  stepContent: {
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    margin: 16,
+    borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  stepTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#2D3748',
+    marginBottom: 5,
+  },
+  stepDescription: {
+    fontSize: 14,
+    color: '#718096',
+    marginBottom: 20,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4A5568',
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    backgroundColor: '#F7FAFC',
+    overflow: 'hidden',
+  },
+  textInput: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#2D3748',
+  },
+  textAreaWrapper: {
+    height: 120,
+    alignItems: 'flex-start',
+  },
+  textArea: {
+    height: 120,
+    textAlignVertical: 'top',
+  },
+  nonEditableWrapper: {
+    padding: 16,
+    backgroundColor: '#EDF2F7',
+    borderRadius: 12,
+  },
+  nonEditableText: {
+    fontSize: 16,
+    color: '#4A5568',
+    fontWeight: '500',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  gradientButtonContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#6a11cb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
     elevation: 4,
   },
-  subHeading: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#5F4B8B', // Purple color for subheading
-    marginBottom: 10,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'purple',
-  },
-  text: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 10,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'purple',
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
-    marginBottom: 10,
-  },
-  button: {
-    backgroundColor: 'purple', // Purple color for button
-    paddingVertical: 14,
-    borderRadius: 8,
+  gradientButton: {
+    paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 10,
-    shadowColor: '#5F4B8B',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  disabledButton: {
+    opacity: 0.7,
+  },
+  secondaryButton: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
+  secondaryButtonText: {
+    color: '#6a11cb',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  securityNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  securityText: {
+    fontSize: 12,
+    color: '#6a11cb',
+    marginLeft: 5,
+  }
 });
 
 export default LoanRequestScreen;
