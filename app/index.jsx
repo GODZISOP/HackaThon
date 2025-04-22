@@ -1,104 +1,211 @@
-import { Link, useRouter } from 'expo-router';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Animated, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient'; // For gradient backgrounds
-import * as Animatable from 'react-native-animatable'; 
-import { useRoute } from '@react-navigation/native';// For animations
-import { useState,useEffect } from 'react';
+import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Animated, Dimensions, StatusBar } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Animatable from 'react-native-animatable';
+import { useState, useEffect, useRef } from 'react';
+import { MaterialIcons } from '@expo/vector-icons';
+
+// Get device screen dimensions for responsiveness
 const { height, width } = Dimensions.get('window');
-  const router = useRouter();
 
 const Index = () => {
-  const fadeAnim = useState(new Animated.Value(0))[0];
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(40)).current;
+  const router = useRouter();
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-    }).start();
-  }, []);
+    // Run the animations when the component is mounted
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 1000,
+        useNativeDriver: true,
+      })
+    ]).start();
+  }, [fadeAnim, translateY]);
 
   return (
-    <LinearGradient
-      colors={['white', 'white']} // White and light purple gradient
-      style={styles.container}
-    >
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <LinearGradient
+        colors={['#6a11cb', '#2575fc']}
+        style={styles.background}
+      />
+
       {/* Image/GIF Section */}
       <Animatable.View
-        animation="fadeInDown"
-        duration={1500}
-        style={styles.header}
+        animation="fadeIn"
+        duration={1200}
+        style={styles.imageContainer}
       >
-        <Image
-          source={require('../assets/images/hi.gif')} // Replace with your image
-          style={styles.profileImage} // Image takes full width and no round corners
-        />
+        <View style={styles.imageWrapper}>
+          <Image
+            source={require('../assets/images/hi.gif')}
+            style={styles.heroImage}
+          />
+        </View>
       </Animatable.View>
 
-      {/* Bottom section with curves */}
+      {/* Content card */}
       <Animatable.View
         animation="fadeInUp"
-        duration={1500}
-        style={[styles.footer, { opacity: fadeAnim }]}
+        duration={1000}
+        delay={300}
+        style={styles.contentCard}
       >
         <Text style={styles.welcomeText}>Welcome to LoanEasy</Text>
-        <Text style={styles.tagline}>Your trusted partner for fast and secure loans.</Text>
+        <Text style={styles.tagline}>
+          Your trusted partner for fast and secure loans.
+        </Text>
 
-        {/* Loan Request Button */}
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => router.push('/loan')} // Update route as needed
+        <Animated.View
+          style={[
+            styles.buttonContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: translateY }]
+            }
+          ]}
         >
-          <Text style={styles.buttonText}>Get Started</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.getStartedButton}
+            onPress={() => router.push('/Home')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.buttonText}>Get Started</Text>
+            <MaterialIcons name="arrow-forward" size={20} color="#6a11cb" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={() => router.push('/')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.loginButtonText}>I already have an account</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </Animatable.View>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { 
-    flex: 1,  // Image takes up half of the screen (top portion)
-    justifyContent: 'center', 
-
-    alignItems: 'center', 
-    marginTop: height * 0.1,
-    overflow: 'hidden',  // Ensure image does not overflow outside the screen
+  container: {
+    flex: 1,
   },
-  profileImage: {
-    width: width,  // Image takes full width of the screen
-    height: height * 0.5,  // Height adjusted to 50% of the screen
-    resizeMode: 'cover',  // Ensures the image covers the area without distortion
+  background: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
   },
-  welcomeText: { fontSize: width * 0.08, fontWeight: 'bold', color: 'black', textAlign: 'center', marginBottom: 10 },
-  tagline: { fontSize: width * 0.05, color: 'black', textAlign: 'center', paddingHorizontal: 40, lineHeight: 24 },
-  footer: {
-    flex: 1, // Bottom part takes up the other half of the screen
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginBottom: 0,
-    backgroundColor: 'pink', // Add a white background to the footer for contrast
-    borderTopLeftRadius: 50, // Curved top left corner
-    borderTopRightRadius: 50, // Curved top right corner
-    borderBottomLeftRadius: 30, // Curved bottom left corner
-    borderBottomRightRadius: 30, // Curved bottom right corner
-    shadowColor: '#000', // Shadow for visual effect
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: -4 },
-    shadowRadius: 10,
-    elevation: 5, // Elevation for shadow on Android
-  },
-  button: {
-    backgroundColor: 'black', // Purple button
-    paddingVertical: 15,
-    paddingHorizontal: width * 0.2,
-    borderRadius: 10,
-    marginTop: 20,
-    alignItems: 'center',
+  imageContainer: {
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: height * 0.05,
   },
-  buttonText: { color: '#fff', fontSize: width * 0.05, fontWeight: 'bold' },
+  imageWrapper: {
+    width: width * 0.9,
+    height: height * 0.4,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  contentCard: {
+    width: width,
+    paddingTop: 36,
+    paddingBottom: 40,
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -6,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  welcomeText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  tagline: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    lineHeight: 24,
+    marginBottom: 30,
+  },
+  buttonContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  getStartedButton: {
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 14,
+    width: '90%',
+    shadowColor: '#6a11cb',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(106, 17, 203, 0.3)',
+  },
+  buttonText: {
+    color: '#6a11cb',
+    fontSize: 18,
+    fontWeight: '700',
+    marginRight: 8,
+  },
+  loginButton: {
+    paddingVertical: 12,
+    width: '90%',
+    alignItems: 'center',
+  },
+  loginButtonText: {
+    color: '#6a11cb',
+    fontSize: 16,
+    fontWeight: '500',
+    textDecorationLine: 'underline',
+  },
 });
 
 export default Index;

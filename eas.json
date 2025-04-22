@@ -1,12 +1,11 @@
 {
-  "cli": {
-    "version": ">= 14.5.0",
-    "appVersionSource": "remote"
-  },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "API_KEY": "your_api_key_here"
+      }
     },
     "preview": {
       "distribution": "internal"
@@ -14,8 +13,5 @@
     "production": {
       "autoIncrement": true
     }
-  },
-  "submit": {
-    "production": {}
   }
 }
