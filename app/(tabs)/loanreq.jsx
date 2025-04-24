@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // You'll need to install expo-linear-gradient:
 // expo install expo-linear-gradient
 
@@ -9,27 +12,35 @@ const LoanRequestScreen = () => {
   const params = useLocalSearchParams();
   const [activeStep, setActiveStep] = useState(1);
   const [loading, setLoading] = useState(false);
-
+  
+  const router = useRouter();
   const [form, setForm] = useState({
     email: params.email || "",
     loanAmount: params.loanAmount || "",
     userId: params.userId || "",
-    guarantor1Name: '',
-    guarantor1Email: '',
-    guarantor1Location: '',
-    guarantor1Cnic: '',
-    guarantor2Name: '',
-    guarantor2Email: '',
-    guarantor2Location: '',
-    guarantor2Cnic: '',
-    address: '',
-    phoneNumber: '',
-    statement: '',
+    guarantor1Name: params.guarantor1Name || '',
+    guarantor1Email: params.guarantor1Email || '',
+    guarantor1Location: params.guarantor1Location || '',
+    guarantor1Cnic: params.guarantor1Cnic || '',
+    guarantor2Name: params.guarantor2Name || '',
+    guarantor2Email: params.guarantor2Email || '',
+    guarantor2Location: params.guarantor2Location || '',
+    guarantor2Cnic: params.guarantor2Cnic || '',
+    duration: "",         // ← new
+    interestRate: "",     // ← new
+    monthlyPayment: "",   // ← new
+    statement: params.statement || "",
+    address: params.address || '',
+    phoneNumber: params.phoneNumber || '',
+    statement: params.statement || '',
   });
+  
 
   const handleChange = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
+ 
+  const BASE_URL = "http://192.168.100.148:4001";
 
   const nextStep = () => {
     if (activeStep < 4) {
@@ -46,10 +57,13 @@ const LoanRequestScreen = () => {
   const handleSubmit = async () => {
     try {
       setLoading(true);
-      
+  
       const payload = {
         email: form.email,
-        loanAmount: form.loanAmount,
+        loanAmount: parseFloat(form.loanAmount) || 0,  // Ensure it's a valid number
+        duration: parseFloat(form.duration) || 0,      // New field for loan duration
+        interestRate: parseFloat(form.interestRate) || 0, // New field for interest rate
+        monthlyPayment: parseFloat(form.monthlyPayment) || 0, // New field for monthly payment
         userId: form.userId,
         guarantors: [
           { name: form.guarantor1Name, email: form.guarantor1Email, location: form.guarantor1Location, cnic: form.guarantor1Cnic },
@@ -58,25 +72,44 @@ const LoanRequestScreen = () => {
         personalInfo: { address: form.address, phoneNumber: form.phoneNumber },
         statement: form.statement || "",
       };
-
+      
+  
       console.log("📤 Sending Loan Request:", payload);
-
-      const response = await fetch('http://localhost:4001/api/loan-request', {
+  
+      const response = await fetch(`${BASE_URL}/api/loan-request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Submission failed');
-
+  
+      // persist the email in AsyncStorage so your list screen can fall back on it
+      await AsyncStorage.setItem('userEmail', form.email);
+  
       setLoading(false);
-      Alert.alert('Success', 'Your loan request has been submitted successfully');
+      Alert.alert('Success', 'Your loan request has been submitted successfully', [
+        {
+          text: 'OK',
+          onPress: () =>
+            router.push({
+              pathname: '/requser',
+              params: {
+                params: { ...form }, // passing everything in the form
+                
+              },
+            }),
+        },
+      ]);
     } catch (error) {
       setLoading(false);
       Alert.alert('Error', error.message);
     }
   };
+  
+  // ... rest of your existing code ...
+
+  
 
   const renderInputField = (label, placeholder, key, keyboardType = "default", isSecure = false) => (
     <View style={styles.inputContainer}>
@@ -155,18 +188,17 @@ const LoanRequestScreen = () => {
         return (
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>Loan Information</Text>
-            <Text style={styles.stepDescription}>Enter your loan request details</Text>
-            
-            {/* Changed to editable fields */}
-            {renderInputField("Email", "Enter your email address", "email", "email-address")}
-            {renderInputField("Loan Amount", "Enter requested loan amount", "loanAmount", "numeric")}
+     +      {/* existing fields */}
+            {renderInputField("Email", "Enter your email", "email", "email-address")}
+            {renderInputField("Loan Amount", "Enter amount", "loanAmount", "numeric")}
             {renderInputField("User ID", "Enter your user ID", "userId")}
-            
-            <GradientButton 
-              text="Continue" 
-              onPress={nextStep} 
-              style={{ marginTop: 20 }}
-            />
+     
+     +      {/* new required fields */}
+     +      {renderInputField("Duration (months)", "e.g. 12", "duration", "numeric")}
+     +      {renderInputField("Interest Rate (%)", "e.g. 5.5", "interestRate", "numeric")}
+     +      {renderInputField("Monthly Payment", "e.g. 450.00", "monthlyPayment", "numeric")}
+     
+            <GradientButton text="Continue" onPress={nextStep} style={{ marginTop: 20 }}/>
           </View>
         );
       case 2:
@@ -218,44 +250,54 @@ const LoanRequestScreen = () => {
       case 4:
         return (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Your Details</Text>
-            <Text style={styles.stepDescription}>Please provide your personal information</Text>
-            
-            {renderInputField("Address", "Enter your complete address", "address")}
-            {renderInputField("Phone Number", "Enter your phone number", "phoneNumber", "phone-pad")}
-            
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Additional Statement (Optional)</Text>
-              <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
-                <TextInput
-                  style={[styles.textInput, styles.textArea]}
-                  placeholder="Any additional information you'd like to share"
-                  value={form.statement}
-                  onChangeText={(val) => handleChange('statement', val)}
-                  multiline={true}
-                  numberOfLines={4}
-                  placeholderTextColor="#A0AEC0"
-                />
-              </View>
-            </View>
-            
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.secondaryButton} onPress={prevStep}>
-                <Text style={styles.secondaryButtonText}>Back</Text>
-              </TouchableOpacity>
-              <GradientButton 
-                text={loading ? "Submitting..." : "Submit Application"}
-                onPress={handleSubmit}
-                disabled={loading}
-                style={{ flex: 1 }}
+          <Text style={styles.stepTitle}>Your Details</Text>
+          <Text style={styles.stepDescription}>Please provide your personal information</Text>
+          
+          {renderInputField("Address", "Enter your complete address", "address")}
+          {renderInputField("Phone Number", "Enter your phone number", "phoneNumber", "phone-pad")}
+          
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Additional Statement (Optional)</Text>
+            <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                placeholder="Any additional information you'd like to share"
+                value={form.statement}
+                onChangeText={(val) => handleChange('statement', val)}
+                multiline={true}
+                numberOfLines={4}
+                placeholderTextColor="#A0AEC0"
               />
             </View>
           </View>
-        );
-      default:
-        return null;
-    }
-  };
+          
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={prevStep}>
+              <Text style={styles.secondaryButtonText}>Back</Text>
+            </TouchableOpacity>
+            <GradientButton 
+              text={loading ? "Submitting..." : "Submit Application"}
+              onPress={handleSubmit}
+              disabled={loading}
+              style={{ flex: 1 }}
+            />
+          </View>
+          
+          {/* New Button Example */}
+          <GradientButton
+            text="Cancel Request"
+            onPress={() => {
+              Alert.alert("Cancelled", "Your loan request has been cancelled.");
+              // Perform any cancel action here, like navigating back or resetting the form
+            }}
+            style={{ marginTop: 20, backgroundColor: '#E2E8F0' }}
+          />
+        </View>
+      );
+    default:
+      return null;
+  }
+};
 
   return (
     <KeyboardAvoidingView

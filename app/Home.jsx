@@ -216,10 +216,12 @@ const LandingPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    
     backgroundColor: '#f9f9f9',
     paddingTop: Platform.OS === 'android' ? 25 : 0,
   },
   loginButton: {
+    marginTop:160,
     position: 'absolute',
     top: Platform.OS === 'android' ? 30 : 10,
     right: 20,

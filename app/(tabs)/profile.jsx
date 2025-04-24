@@ -19,7 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
-const BASE_URL = "http://192.168.100.144:4001";
+const BASE_URL = "http://192.168.100.148:4001";
 
 const Profile = () => {
   const { email } = useLocalSearchParams();

@@ -35,7 +35,13 @@ export default function TabLayout() {
           title: 'Logout',
           tabBarIcon: ({ color }) => <FontAwesome size={24} name="sign-out" color={color} />,
         }}
-      />
+      /> <Tabs.Screen
+      name="requser"
+      options={{
+        title: 'requser',
+        tabBarIcon: ({ color }) => <FontAwesome size={24} name="sign-out" color={color} />,
+      }}
+    />
     </Tabs>
   );
 }

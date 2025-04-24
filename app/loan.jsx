@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -34,23 +34,32 @@ const LoanFormPage = () => {
   const [isCalculating, setIsCalculating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const baseUrl = "http://192.168.100.144:4001";
+  const baseUrl = "http://192.168.100.148:4001";
 
   // Helper functions
   const checkUserExists = async (email, cnic) => {
     try {
-      const response = await fetch(`http://localhost:4001/api/check-user?email=${email}&cnic=${cnic}`);
-      const data = await response.json();
-      return response.status === 400 ? alert(data.message) : false;
+      const response = await fetch(`${baseUrl}/api/check-user?email=${email}&cnic=${cnic}`);
+      
+      const contentType = response.headers.get("Content-Type");
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        return data;
+      } else {
+        const text = await response.text();
+        console.error("Unexpected response:", text);
+        throw new Error(`Unexpected response: ${text}`);
+      }
     } catch (error) {
       console.error("Error checking user:", error);
-      return false;
+      Alert.alert("Error", "Couldn't verify user. Please try again later.");
+      return null;
     }
   };
 
-  const formatCurrency = (value) => value?.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
   const unformatCurrency = (value) => value?.replace(/,/g, '');
+
+  const formatCurrency = (value) => value?.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
   const formatCNIC = (text) => {
     const digits = text.replace(/\D/g, '');
@@ -86,7 +95,6 @@ const LoanFormPage = () => {
     return true;
   };
 
-  // Form submission
   const handleSubmit = async () => {
     if (!validateForm()) return;
   
@@ -134,8 +142,7 @@ const LoanFormPage = () => {
       setIsSubmitting(false);
     }
   };
-  
-  // Monthly installment calculation
+
   const calculateInstallment = () => {
     if (!loanAmount || !loanDuration) {
       Alert.alert('Missing Information', 'Please enter both loan amount and duration.');
@@ -159,7 +166,6 @@ const LoanFormPage = () => {
     }, 800);
   };
 
-  // Handlers for input changes
   const handleLoanAmountChange = (text) => {
     const unformatted = unformatCurrency(text);
     if (unformatted === '' || /^\d+$/.test(unformatted)) {
@@ -176,7 +182,6 @@ const LoanFormPage = () => {
 
   const handleCNICChange = (text) => setCnic(formatCNIC(text));
 
-  // Navigation to login
   const navigateToLogin = () => router.push('/login');
 
   return (
@@ -356,6 +361,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   loginButton: {
+    marginTop:380,
+
     position: 'absolute',
     top: 40,
     right: 20,
