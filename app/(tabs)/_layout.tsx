@@ -5,43 +5,61 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,  // Hide header (page name)
+        headerShown: false,
+        tabBarActiveTintColor: '#00796B',  // Teal blue - finance vibe
+        tabBarInactiveTintColor: '#999',
+        tabBarStyle: {
+          backgroundColor: '#fff',
+          borderTopColor: '#eee',
+          height: 80,
+          paddingBottom: 5,
+          paddingTop: 5,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+        },
       }}
     >
       <Tabs.Screen
         name="loanreq"
         options={{
           title: 'Apply',
-          tabBarIcon: ({ color }) => <FontAwesome size={24} name="file-text" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <FontAwesome name="edit" size={22} color={color} />
+          ),
         }}
       />
+      
       <Tabs.Screen
-        name="index"
+        name="requser"
         options={{
-          title: 'Settings',
-          tabBarIcon: ({ color }) => <FontAwesome size={24} name="cogs" color={color} />,
+          title: 'Requests',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome name="list-ul" size={22} color={color} />
+          ),
         }}
       />
+
       <Tabs.Screen
-        name="Profile"
+        name="landing"
+        options={{
+          title: 'Finance',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome name="line-chart" size={22} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <FontAwesome size={24} name="user-circle" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <FontAwesome name="user-circle" size={22} color={color} />
+          ),
         }}
       />
-      <Tabs.Screen
-        name="Logout"
-        options={{
-          title: 'Logout',
-          tabBarIcon: ({ color }) => <FontAwesome size={24} name="sign-out" color={color} />,
-        }}
-      /> <Tabs.Screen
-      name="requser"
-      options={{
-        title: 'requser',
-        tabBarIcon: ({ color }) => <FontAwesome size={24} name="sign-out" color={color} />,
-      }}
-    />
     </Tabs>
   );
 }

@@ -94,16 +94,17 @@ const LandingPage = () => {
           <Text style={styles.sectionTitle}>Our Services</Text>
           
           <View style={styles.featureCards}>
-            <TouchableOpacity 
-              style={styles.featureCard}
-              onPress={() => navigateTo('loans')}
-            >
-              <View style={[styles.iconCircle, { backgroundColor: 'rgba(106, 17, 203, 0.1)' }]}>
-                <FontAwesome5 name="hand-holding-usd" size={22} color="#6a11cb" />
-              </View>
-              <Text style={styles.featureTitle}>Quick Loans</Text>
-              <Text style={styles.featureDescription}>Get approved in minutes with minimal documentation</Text>
-            </TouchableOpacity>
+          <TouchableOpacity 
+  style={styles.featureCard}
+  onPress={() => router.push('/ContactUs')}
+>
+  <View style={[styles.iconCircle, { backgroundColor: 'rgba(106, 17, 203, 0.1)' }]}>
+  <FontAwesome5 name="envelope" size={22} color="#6a11cb" />
+
+  </View>
+  <Text style={styles.featureTitle}>Contact us</Text>
+  <Text style={styles.featureDescription}>Get approved in minutes with minimal documentation</Text>
+</TouchableOpacity>
             
             <TouchableOpacity 
               style={styles.featureCard}

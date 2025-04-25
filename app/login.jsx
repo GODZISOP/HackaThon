@@ -17,7 +17,6 @@ import {
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
@@ -34,7 +33,6 @@ const LoginScreen = () => {
     const checkLoginStatus = async () => {
       try {
         const storedEmail = await AsyncStorage.getItem('userEmail');
-        console.log('Stored Email:', storedEmail);  // Log stored email for debugging
         if (storedEmail) {
           router.push(`/profile?email=${encodeURIComponent(storedEmail)}`);
         }
@@ -42,70 +40,75 @@ const LoginScreen = () => {
         console.error("Error checking login status:", error);
       }
     };
-  
+
     checkLoginStatus();
   }, []);
+
   const baseUrl = "http://192.168.100.148:4001"; // Ensure the IP is correct
   const TIMEOUT = 30000; // Timeout in milliseconds (30 seconds)
 
   const handleLogin = async () => {
-  if (!email || !loginCode) {
-    Alert.alert('Error', 'Please enter both email and login code.');
-    return;
-  }
-
-  // Validate Email format
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  if (!emailRegex.test(email)) {
-    Alert.alert('Invalid Email', 'Please enter a valid email address.');
-    return;
-  }
-
-  // Validate Login Code format (4 digits)
-  if (!loginCode || !/^\d{4}$/.test(loginCode)) {
-    Alert.alert('Invalid Login Code', 'Please enter a valid 4-digit login code.');
-    return;
-  }
-
-  setIsLoading(true);
-  setErrorMessage('');
-
-  try {
-    const res = await axios.post(
-      `${baseUrl}/login`,
-      { email, loginCode },
-      { timeout: TIMEOUT }
-    );
-
-    if (res.status === 200) {
-      Alert.alert('Login Successful', res.data.message);
-
-      // Store userId in AsyncStorage
-      await AsyncStorage.setItem('userEmail', email);
-      await AsyncStorage.setItem('userId', res.data.userId);  // Store userId
-
-      router.push(`/profile?userId=${encodeURIComponent(res.data.userId)}`);
-    } else {
-      Alert.alert('Login Failed', res.data.message || 'Login failed.');
-      setErrorMessage(res.data.message || 'Login failed.');
-    }
-  } catch (error) {
-    console.error('Login Error:', error);
-
-    if (!error.response) {
-      // Network error
-      Alert.alert('Network Error', 'Please check your internet connection and try again.');
-    } else {
-      const msg = error.response?.data?.message || error.message || 'An unexpected error occurred.';
-      Alert.alert('Error', msg);
+    if (!email || !loginCode) {
+      Alert.alert('Error', 'Please enter both email and login code.');
+      return;
     }
 
-    setErrorMessage(error.response?.data?.message || error.message || 'An unexpected error occurred.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+    // Validate Email format
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
 
+    // Validate Login Code format (4 digits)
+    if (!loginCode || !/^\d{4}$/.test(loginCode)) {
+      Alert.alert('Invalid Login Code', 'Please enter a valid 4-digit login code.');
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      const res = await axios.post(
+        `${baseUrl}/login`,
+        { email, loginCode }, // Only send email and loginCode
+        { timeout: TIMEOUT }
+      );
+
+      if (res.status === 200) {
+        if (res.data.userId) {
+          // If user ID is found, proceed with login
+          Alert.alert('Login Successful', res.data.message);
+          await AsyncStorage.setItem('userEmail', email);
+          await AsyncStorage.setItem('userId', res.data.userId);  // Store userId
+
+          router.push(`/profile?email=${encodeURIComponent(email)}`);
+        } else {
+          // Handle case where no user ID is found for this email
+          Alert.alert('No User Found', 'No user ID found for this email. Please check your email or register.');
+          setErrorMessage('No user ID found for this email.');
+        }
+      } else {
+        Alert.alert('Login Failed', res.data.message || 'Login failed.');
+        setErrorMessage(res.data.message || 'Login failed.');
+      }
+    } catch (error) {
+      console.error('Login Error:', error);
+
+      if (!error.response) {
+        // Network error
+        Alert.alert('Network Error', 'Please check your internet connection and try again.');
+      } else {
+        const msg = error.response?.data?.message || error.message || 'An unexpected error occurred.';
+        Alert.alert('Error', msg);
+      }
+
+      setErrorMessage(error.response?.data?.message || error.message || 'An unexpected error occurred.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView

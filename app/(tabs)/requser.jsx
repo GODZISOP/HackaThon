@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+
 import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,74 +11,101 @@ const BASE_URL = "http://192.168.100.148:4001/api";
 const UserLoanRequestsScreen = () => {
   const { email: paramEmail, userId: paramUserId } = useLocalSearchParams();
   const router = useRouter();
-  
-  const [loanRequests, setLoanRequests] = useState([]);
 
+  const [loanRequests, setLoanRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
   // Fetch loan requests by email or userId
-  const fetchRequests = async ({ email, userId }) => {
+  const fetchRequests = useCallback(async ({ email, userId }) => {
     try {
-      setLoading(true);
-
+      if (refreshing) {
+        // Just show refreshing indicator without full loading screen
+      } else {
+        setLoading(true);
+      }
+  
       const url = new URL(`${BASE_URL}/loan-requests`);
       if (email) url.searchParams.append('email', email);
       if (userId) url.searchParams.append('userId', userId);
   
+      console.log('Fetching loan requests from URL:', url.toString());  // Log the full URL
+  
       const response = await fetch(url.toString());
       const data = await response.json();
   
-      // Log the data for debugging
-      console.log('Fetched loan requests:', data);
+      console.log('Fetched loan requests:', data);  // Log the fetched data
   
       if (!response.ok) throw new Error(data.message || `Server error: ${response.status}`);
       if (!Array.isArray(data)) throw new Error('Unexpected response format');
   
-      setLoanRequests(data);
+      setLoanRequests(data);  // Set loan requests after successful fetch
       setError(null);
     } catch (e) {
-      console.error('Fetch error:', e);
+      console.error('Fetch error:', e);  // Log the exact error
       setError(e.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [refreshing]);
   
+
   useEffect(() => {
     const init = async () => {
       let email = paramEmail;
+      
+      // First check if `paramEmail` exists
       if (!email) {
         email = await AsyncStorage.getItem('userEmail');
       }
-      // If navigating with new userId, clear stored email filter
+  
       if (paramUserId) {
+        // If `paramUserId` exists, you can use that instead of `email`
         email = null;
       }
-
+  
+      // If neither `email` nor `paramUserId` is provided, set an error
       if (!email && !paramUserId) {
         setError('No filter provided.');
         setLoading(false);
         return;
       }
-
-      // persist the email if provided
+  
       if (email) await AsyncStorage.setItem('userEmail', email);
-
+  
+      // Call `fetchRequests` with the correct email or userId
       fetchRequests({ email, userId: paramUserId });
     };
+  
     init();
   }, [paramEmail, paramUserId]);
+  
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchRequests({ email: paramEmail, userId: paramUserId });
+  const onRefresh = async () => {
+    setRefreshing(true); // Set refreshing to true to show the indicator
+  
+    // First, check if `paramEmail` or `paramUserId` is set
+    let email = paramEmail;
+    let userId = paramUserId;
+  
+    if (!email && !userId) {
+      email = await AsyncStorage.getItem('userEmail'); // Fallback to AsyncStorage if no email or userId
+    }
+  
+    // Only fetch data if there's an email or userId
+    if (email || userId) {
+      await fetchRequests({ email, userId });
+    } else {
+      setError('No filter provided. Cannot fetch data.');
+    }
+  
+    setRefreshing(false); // Stop refreshing indicator
   };
-
+  
+  
   const navigateToDetail = (loanRequest) => {
-    // Pass the entire loan request object instead of just the ID
     router.push({
       pathname: `/loan-request/${loanRequest._id}`,
       params: { loanData: JSON.stringify(loanRequest) }
@@ -85,7 +113,7 @@ const UserLoanRequestsScreen = () => {
   };
 
   const getStatusColor = (status) => {
-    switch(status?.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'approved': return '#4CAF50';
       case 'rejected': return '#F44336';
       case 'pending': return '#FFC107';
@@ -113,7 +141,7 @@ const UserLoanRequestsScreen = () => {
       >
         <MaterialIcons name="error-outline" size={64} color="#ffffff" />
         <Text style={styles.errorText}>Error: {error}</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.retryButton}
           onPress={() => fetchRequests({ email: paramEmail, userId: paramUserId })}
         >
@@ -137,13 +165,13 @@ const UserLoanRequestsScreen = () => {
 
       {loanRequests.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Image 
-            source={{ uri: 'https://cdn-icons-png.flaticon.com/512/4076/4076432.png' }} 
+          <Image
+            source={{ uri: 'https://cdn-icons-png.flaticon.com/512/4076/4076432.png' }}
             style={styles.emptyImage}
           />
           <Text style={styles.emptyText}>No loan requests found</Text>
           <Text style={styles.emptySubText}>Start by creating a new loan request</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.createButton}
             onPress={() => router.push('/create-loan')}
           >
@@ -152,63 +180,64 @@ const UserLoanRequestsScreen = () => {
         </View>
       ) : (
         <FlatList
-        data={loanRequests}
-        keyExtractor={(item) => item._id.toString()}
-        contentContainerStyle={styles.listContainer}
-        onRefresh={onRefresh}
-        refreshing={refreshing}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.requestCard}
-            onPress={() => navigateToDetail(item)}
-          >
-            <View style={styles.cardHeader}>
-              <View style={styles.amountContainer}>
-                <Text style={styles.currencySymbol}>$</Text>
-                <Text style={styles.loanAmount}>{Number(item.loanAmount).toLocaleString()}</Text>
+          data={loanRequests}
+          keyExtractor={(item) => item._id.toString()}
+          contentContainerStyle={styles.listContainer}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.requestCard}
+              onPress={() => navigateToDetail(item)}
+            >
+              <View style={styles.cardHeader}>
+                <View style={styles.amountContainer}>
+                  <Text style={styles.currencySymbol}>$</Text>
+                  <Text style={styles.loanAmount}>{Number(item.loanAmount).toLocaleString()}</Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]} >
+                  <Text style={styles.statusText}>{item.status || 'Pending'}</Text>
+                </View>
               </View>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]} >
-                <Text style={styles.statusText}>{item.status || 'Pending'}</Text>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <View style={styles.infoItem}>
+                  <Feather name="mail" size={16} color="#6a11cb" />
+                  <Text style={styles.infoText} numberOfLines={1}>{item.email}</Text>
+                </View>
+                <View style={styles.infoItem}>
+                  <Feather name="user" size={16} color="#6a11cb" />
+                  <Text style={styles.infoText} numberOfLines={1}>ID: {item.userId?.substring(0, 8)}...</Text>
+                </View>
               </View>
-            </View>
-      
-            <View style={styles.divider} />
-      
-            <View style={styles.infoRow}>
-              <View style={styles.infoItem}>
-                <Feather name="mail" size={16} color="#6a11cb" />
-                <Text style={styles.infoText} numberOfLines={1}>{item.email}</Text>
+
+              <View style={styles.infoRow}>
+                <View style={styles.infoItem}>
+                  <Feather name="users" size={16} color="#6a11cb" />
+                  <Text style={styles.infoText}>{item.guarantors?.length || 0} Guarantors</Text>
+                </View>
+                <View style={styles.infoItem}>
+                  <Feather name="calendar" size={16} color="#6a11cb" />
+                  <Text style={styles.infoText}>
+                    {new Date(item.createdAt || Date.now()).toLocaleDateString()}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.infoItem}>
-                <Feather name="user" size={16} color="#6a11cb" />
-                <Text style={styles.infoText} numberOfLines={1}>ID: {item.userId?.substring(0, 8)}...</Text>
+
+              <View style={styles.viewDetailsContainer}>
+                <Text style={styles.viewDetailsText}>View Details</Text>
+                <Feather name="chevron-right" size={16} color="#2575fc" />
               </View>
-            </View>
-      
-            <View style={styles.infoRow}>
-              <View style={styles.infoItem}>
-                <Feather name="users" size={16} color="#6a11cb" />
-                <Text style={styles.infoText}>{item.guarantors?.length || 0} Guarantors</Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Feather name="calendar" size={16} color="#6a11cb" />
-                <Text style={styles.infoText}>
-                  {new Date(item.createdAt || Date.now()).toLocaleDateString()}
-                </Text>
-              </View>
-            </View>
-      
-            <View style={styles.viewDetailsContainer}>
-              <Text style={styles.viewDetailsText}>View Details</Text>
-              <Feather name="chevron-right" size={16} color="#2575fc" />
-            </View>
-          </TouchableOpacity>
-        )}
-      />
+            </TouchableOpacity>
+          )}
+        />
       )}
     </LinearGradient>
   );
 };
+
 
 const styles = StyleSheet.create({
   background: {
